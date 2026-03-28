@@ -1,0 +1,84 @@
+import React, { useState } from 'react';
+import { Alert, StyleSheet, Text, View } from 'react-native';
+import { useAuth } from '../context/AuthContext';
+import { colors } from '../theme/theme';
+import FormInput from '../components/FormInput';
+import PrimaryButton from '../components/PrimaryButton';
+import ScreenContainer from '../components/ScreenContainer';
+
+export default function RegisterScreen({ navigation }) {
+  const { register } = useAuth();
+  const [form, setForm] = useState({
+    name: '',
+    email: '',
+    password: '',
+    role: 'user',
+    houseNumber: '',
+    block: '',
+  });
+  const [loading, setLoading] = useState(false);
+
+  const updateField = (key, value) => {
+    setForm(current => ({ ...current, [key]: value }));
+  };
+
+  const handleRegister = async () => {
+    try {
+      setLoading(true);
+      await register(form);
+    } catch (error) {
+      Alert.alert('Registration failed', error.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <ScreenContainer>
+      <Text style={styles.title}>Create your account</Text>
+      <Text style={styles.subtitle}>
+        New residents can sign up here. Admin and worker accounts can also be created from the backend or database for testing.
+      </Text>
+
+      <View style={styles.card}>
+        <FormInput label="Full Name" onChangeText={value => updateField('name', value)} value={form.name} />
+        <FormInput
+          autoCapitalize="none"
+          keyboardType="email-address"
+          label="Email"
+          onChangeText={value => updateField('email', value)}
+          value={form.email}
+        />
+        <FormInput
+          label="Password"
+          onChangeText={value => updateField('password', value)}
+          secureTextEntry
+          value={form.password}
+        />
+        <FormInput label="House Number" onChangeText={value => updateField('houseNumber', value)} value={form.houseNumber} />
+        <FormInput label="Block" onChangeText={value => updateField('block', value)} value={form.block} />
+        <PrimaryButton label="Register" loading={loading} onPress={handleRegister} />
+        <PrimaryButton label="Back to login" onPress={() => navigation.goBack()} variant="secondary" />
+      </View>
+    </ScreenContainer>
+  );
+}
+
+const styles = StyleSheet.create({
+  title: {
+    fontSize: 30,
+    fontWeight: '800',
+    color: colors.text,
+  },
+  subtitle: {
+    fontSize: 15,
+    lineHeight: 22,
+    color: colors.textMuted,
+  },
+  card: {
+    backgroundColor: colors.surface,
+    borderRadius: 24,
+    padding: 20,
+    gap: 16,
+  },
+});

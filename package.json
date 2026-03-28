@@ -1,0 +1,13 @@
+{
+  "name": "society-connect-workspace",
+  "private": true,
+  "scripts": {
+    "frontend": "npm --prefix frontend run start",
+    "android": "npm --prefix frontend run android",
+    "ios": "npm --prefix frontend run ios",
+    "backend": "npm --prefix backend run dev"
+  },
+  "engines": {
+    "node": ">= 20.0.0"
+  }
+}
