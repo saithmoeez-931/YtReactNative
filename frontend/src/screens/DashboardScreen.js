@@ -1,6 +1,7 @@
 import React, { useCallback, useState } from 'react';
 import { Alert, RefreshControl, StyleSheet, Text, View } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
+import { Chip, Surface } from 'react-native-paper';
 import { useAuth } from '../context/AuthContext';
 import { api } from '../services/api';
 import { colors } from '../theme/theme';
@@ -54,16 +55,27 @@ export default function DashboardScreen() {
       refreshControl={<RefreshControl onRefresh={onRefresh} refreshing={refreshing} />}
       scroll
     >
-      <View style={styles.hero}>
+      <Surface elevation={2} style={styles.hero}>
+        <Chip compact style={styles.roleChip} textStyle={styles.roleChipText}>
+          {user?.role === 'super_admin'
+            ? 'Super Admin'
+            : user?.role === 'admin'
+              ? 'Administrator'
+              : user?.role === 'worker'
+                ? 'Worker Desk'
+                : 'Resident'}
+        </Chip>
         <Text style={styles.greeting}>Welcome back, {user?.name}</Text>
         <Text style={styles.helper}>
-          {user?.role === 'admin'
-            ? 'Track complaints, assign workers, and keep the society operations visible.'
+          {user?.role === 'super_admin'
+            ? 'Manage society staff accounts and keep complaint operations under control.'
+            : user?.role === 'admin'
+            ? 'Track complaints, assign workers, and keep operations moving with clear visibility.'
             : user?.role === 'worker'
-              ? 'Review assigned issues and close them with proof after the work is done.'
-              : 'Submit new complaints and monitor progress without visiting the office.'}
+              ? 'Review assigned tasks, update progress, and close issues with proof.'
+              : 'Report issues quickly and keep track of every update without visiting the office.'}
         </Text>
-      </View>
+      </Surface>
 
       <View style={styles.statsRow}>
         <StatCard accent={colors.primary} label="Total" value={summary.totalComplaints} />
@@ -72,7 +84,7 @@ export default function DashboardScreen() {
         <StatCard accent={colors.success} label="Resolved" value={summary.resolvedCount} />
       </View>
 
-      <View style={styles.section}>
+      <Surface elevation={1} style={styles.section}>
         <Text style={styles.sectionTitle}>Category breakdown</Text>
         {summary.byCategory.length ? (
           summary.byCategory.map(item => (
@@ -84,7 +96,7 @@ export default function DashboardScreen() {
         ) : (
           <Text style={styles.emptyText}>No complaints have been created yet.</Text>
         )}
-      </View>
+      </Surface>
     </ScreenContainer>
   );
 }
@@ -94,10 +106,18 @@ const styles = StyleSheet.create({
     paddingBottom: 100,
   },
   hero: {
-    backgroundColor: colors.surface,
     borderRadius: 24,
     padding: 20,
     gap: 10,
+    backgroundColor: colors.surface,
+  },
+  roleChip: {
+    alignSelf: 'flex-start',
+    backgroundColor: colors.primarySoft,
+  },
+  roleChipText: {
+    color: colors.primary,
+    fontWeight: '700',
   },
   greeting: {
     fontSize: 28,
@@ -115,10 +135,10 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   section: {
-    backgroundColor: colors.surface,
     borderRadius: 24,
     padding: 20,
     gap: 14,
+    backgroundColor: colors.surface,
   },
   sectionTitle: {
     fontSize: 18,

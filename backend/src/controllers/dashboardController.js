@@ -1,6 +1,15 @@
 const Complaint = require('../models/Complaint');
+const demoStore = require('../store/demoStore');
 
 async function getSummary(req, res) {
+  if (process.env.DEMO_MODE === 'true') {
+    res.json({
+      success: true,
+      summary: demoStore.getSummaryForUser(req.user),
+    });
+    return;
+  }
+
   const filters = {};
 
   if (req.user.role === 'user') {

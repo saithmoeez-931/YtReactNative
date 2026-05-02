@@ -22,7 +22,11 @@ app.use(morgan('dev'));
 app.use('/uploads', express.static(path.join(__dirname, '..', 'uploads')));
 
 app.get('/api/health', (req, res) => {
-  res.json({ success: true, message: 'Society Connect API is healthy.' });
+  res.json({
+    success: true,
+    message: 'Society Connect API is healthy.',
+    demoMode: process.env.DEMO_MODE === 'true',
+  });
 });
 
 app.use('/api/auth', authRoutes);

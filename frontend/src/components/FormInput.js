@@ -1,5 +1,6 @@
 import React from 'react';
-import { StyleSheet, Text, TextInput, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
+import { TextInput } from 'react-native-paper';
 import { colors } from '../theme/theme';
 
 export default function FormInput({
@@ -11,11 +12,23 @@ export default function FormInput({
 }) {
   return (
     <View style={styles.wrapper}>
-      <Text style={styles.label}>{label}</Text>
       <TextInput
+        error={Boolean(error)}
+        label={label}
+        mode="outlined"
         multiline={multiline}
+        outlineColor={colors.border}
         placeholderTextColor={colors.textMuted}
-        style={[styles.input, multiline && styles.multiline, style]}
+        style={[styles.input, style]}
+        textColor={colors.text}
+        theme={{
+          colors: {
+            primary: colors.primary,
+            outline: colors.border,
+            onSurfaceVariant: colors.textMuted,
+          },
+        }}
+        contentStyle={multiline ? styles.multilineContent : undefined}
         {...props}
       />
       {error ? <Text style={styles.error}>{error}</Text> : null}
@@ -25,25 +38,13 @@ export default function FormInput({
 
 const styles = StyleSheet.create({
   wrapper: {
-    gap: 8,
-  },
-  label: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: colors.text,
+    gap: 6,
   },
   input: {
     backgroundColor: colors.surface,
-    borderColor: colors.border,
-    borderWidth: 1,
-    borderRadius: 16,
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    fontSize: 15,
-    color: colors.text,
   },
-  multiline: {
-    minHeight: 120,
+  multilineContent: {
+    minHeight: 96,
     textAlignVertical: 'top',
   },
   error: {

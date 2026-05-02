@@ -1,7 +1,24 @@
 const User = require('../models/User');
+const demoStore = require('../store/demoStore');
 
 async function getWorkers(req, res) {
-  const workers = await User.find({ role: 'worker' }).select('-password').sort({ name: 1 });
+  if (process.env.DEMO_MODE === 'true') {
+    res.json({
+      success: true,
+      workers: demoStore.listWorkers(),
+    });
+    return;
+  }
+
+  const filters = { role: 'worker' };
+
+  if (req.user.role !== 'super_admin') {
+    filters.isActive = true;
+  }
+
+  const workers = await User.find(filters)
+    .select('-password')
+    .sort({ isActive: -1, name: 1 });
 
   res.json({
     success: true,
@@ -9,6 +26,227 @@ async function getWorkers(req, res) {
   });
 }
 
+async function getAdmins(req, res) {
+  const admins = await User.find({ role: 'admin' })
+    .select('-password')
+    .sort({ name: 1 });
+
+  res.json({
+    success: true,
+    admins,
+  });
+}
+
+async function createAdmin(req, res) {
+  const { name, email, password } = req.body;
+  const cleanName = typeof name === 'string' ? name.trim() : '';
+  const cleanEmail = typeof email === 'string' ? email.trim().toLowerCase() : '';
+  const cleanPassword = typeof password === 'string' ? password.trim() : '';
+
+  if (!cleanName || !cleanEmail || !cleanPassword) {
+    res.status(400);
+    throw new Error('Name, email, and password are required.');
+  }
+
+  const existingUser = await User.findOne({ email: cleanEmail });
+
+  if (existingUser) {
+    res.status(400);
+    throw new Error('A user with this email already exists.');
+  }
+
+  const admin = await User.create({
+    name: cleanName,
+    email: cleanEmail,
+    password: cleanPassword,
+    role: 'admin',
+    specialties: [],
+    isActive: true,
+  });
+
+  res.status(201).json({
+    success: true,
+    message: 'Admin created successfully.',
+    admin: {
+      _id: admin._id,
+      name: admin.name,
+      email: admin.email,
+      role: admin.role,
+      isActive: admin.isActive,
+    },
+  });
+}
+
+async function updateAdmin(req, res) {
+  const { name, email, password } = req.body;
+  const admin = await User.findOne({ _id: req.params.id, role: 'admin' });
+
+  if (!admin) {
+    res.status(404);
+    throw new Error('Admin not found.');
+  }
+
+  const cleanName = typeof name === 'string' ? name.trim() : '';
+  const cleanEmail = typeof email === 'string' ? email.trim().toLowerCase() : '';
+  const cleanPassword = typeof password === 'string' ? password.trim() : '';
+
+  if (cleanEmail && cleanEmail !== admin.email) {
+    const existingUser = await User.findOne({ email: cleanEmail });
+
+    if (existingUser) {
+      res.status(400);
+      throw new Error('A user with this email already exists.');
+    }
+  }
+
+  if (cleanName) {
+    admin.name = cleanName;
+  }
+
+  if (cleanEmail) {
+    admin.email = cleanEmail;
+  }
+
+  if (cleanPassword) {
+    admin.password = cleanPassword;
+  }
+
+  await admin.save();
+
+  res.json({
+    success: true,
+    message: 'Admin updated successfully.',
+    admin: {
+      _id: admin._id,
+      name: admin.name,
+      email: admin.email,
+      role: admin.role,
+      isActive: admin.isActive,
+    },
+  });
+}
+
+async function createWorker(req, res) {
+  const { name, email, password, houseNumber, block, specialties = [] } = req.body;
+  const cleanName = typeof name === 'string' ? name.trim() : '';
+  const cleanEmail = typeof email === 'string' ? email.trim().toLowerCase() : '';
+  const cleanPassword = typeof password === 'string' ? password.trim() : '';
+  const cleanSpecialties = Array.isArray(specialties)
+    ? specialties
+    : String(specialties || '')
+        .split(',')
+        .map(item => item.trim())
+        .filter(Boolean);
+
+  if (!cleanName || !cleanEmail || !cleanPassword) {
+    res.status(400);
+    throw new Error('Name, email, and password are required.');
+  }
+
+  const existingUser = await User.findOne({ email: cleanEmail });
+
+  if (existingUser) {
+    res.status(400);
+    throw new Error('A user with this email already exists.');
+  }
+
+  const worker = await User.create({
+    name: cleanName,
+    email: cleanEmail,
+    password: cleanPassword,
+    role: 'worker',
+    houseNumber: houseNumber || '',
+    block: block || '',
+    specialties: cleanSpecialties.length ? cleanSpecialties : ['general'],
+    isActive: true,
+  });
+
+  res.status(201).json({
+    success: true,
+    message: 'Worker created successfully.',
+    worker: {
+      _id: worker._id,
+      name: worker.name,
+      email: worker.email,
+      role: worker.role,
+      houseNumber: worker.houseNumber,
+      block: worker.block,
+      specialties: worker.specialties,
+      isActive: worker.isActive,
+    },
+  });
+}
+
+async function updateWorker(req, res) {
+  const { name, email, password, isActive, specialties } = req.body;
+  const worker = await User.findOne({ _id: req.params.id, role: 'worker' });
+
+  if (!worker) {
+    res.status(404);
+    throw new Error('Worker not found.');
+  }
+
+  if (typeof isActive === 'boolean') {
+    worker.isActive = isActive;
+  }
+
+  const cleanName = typeof name === 'string' ? name.trim() : '';
+  const cleanEmail = typeof email === 'string' ? email.trim().toLowerCase() : '';
+  const cleanPassword = typeof password === 'string' ? password.trim() : '';
+
+  if (cleanEmail && cleanEmail !== worker.email) {
+    const existingUser = await User.findOne({ email: cleanEmail });
+
+    if (existingUser) {
+      res.status(400);
+      throw new Error('A user with this email already exists.');
+    }
+  }
+
+  if (cleanName) {
+    worker.name = cleanName;
+  }
+
+  if (cleanEmail) {
+    worker.email = cleanEmail;
+  }
+
+  if (cleanPassword) {
+    worker.password = cleanPassword;
+  }
+
+  if (specialties !== undefined) {
+    const cleanSpecialties = Array.isArray(specialties)
+      ? specialties
+      : String(specialties || '')
+          .split(',')
+          .map(item => item.trim())
+          .filter(Boolean);
+
+    worker.specialties = cleanSpecialties.length ? cleanSpecialties : ['general'];
+  }
+
+  await worker.save();
+
+  res.json({
+    success: true,
+    message: 'Worker updated successfully.',
+    worker: {
+      _id: worker._id,
+      name: worker.name,
+      email: worker.email,
+      role: worker.role,
+      specialties: worker.specialties,
+      isActive: worker.isActive,
+    },
+  });
+}
+
 module.exports = {
+  getAdmins,
+  createAdmin,
+  updateAdmin,
   getWorkers,
+  createWorker,
+  updateWorker,
 };

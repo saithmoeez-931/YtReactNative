@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { Alert, StyleSheet, Text, View } from 'react-native';
+import { Alert, StyleSheet, Text } from 'react-native';
+import { Surface } from 'react-native-paper';
 import { useAuth } from '../context/AuthContext';
 import { colors } from '../theme/theme';
 import FormInput from '../components/FormInput';
@@ -37,10 +38,10 @@ export default function RegisterScreen({ navigation }) {
     <ScreenContainer>
       <Text style={styles.title}>Create your account</Text>
       <Text style={styles.subtitle}>
-        New residents can sign up here. Admin and worker accounts can also be created from the backend or database for testing.
+        Residents can register here and begin reporting issues in their society immediately.
       </Text>
 
-      <View style={styles.card}>
+      <Surface elevation={2} style={styles.card}>
         <FormInput label="Full Name" onChangeText={value => updateField('name', value)} value={form.name} />
         <FormInput
           autoCapitalize="none"
@@ -59,7 +60,7 @@ export default function RegisterScreen({ navigation }) {
         <FormInput label="Block" onChangeText={value => updateField('block', value)} value={form.block} />
         <PrimaryButton label="Register" loading={loading} onPress={handleRegister} />
         <PrimaryButton label="Back to login" onPress={() => navigation.goBack()} variant="secondary" />
-      </View>
+      </Surface>
     </ScreenContainer>
   );
 }
@@ -76,9 +77,9 @@ const styles = StyleSheet.create({
     color: colors.textMuted,
   },
   card: {
-    backgroundColor: colors.surface,
     borderRadius: 24,
     padding: 20,
     gap: 16,
+    backgroundColor: colors.surface,
   },
 });

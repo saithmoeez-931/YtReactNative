@@ -62,6 +62,11 @@ const complaintSchema = new mongoose.Schema(
       enum: ['Low', 'Medium', 'High'],
       default: 'Low',
     },
+    assignmentSource: {
+      type: String,
+      enum: ['manual', 'auto'],
+      default: 'auto',
+    },
     assignedTo: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'User',

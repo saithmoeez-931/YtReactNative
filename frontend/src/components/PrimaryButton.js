@@ -1,5 +1,6 @@
 import React from 'react';
-import { ActivityIndicator, Pressable, StyleSheet, Text } from 'react-native';
+import { StyleSheet } from 'react-native';
+import { Button } from 'react-native-paper';
 import { colors } from '../theme/theme';
 
 export default function PrimaryButton({
@@ -7,38 +8,36 @@ export default function PrimaryButton({
   onPress,
   loading = false,
   variant = 'primary',
+  disabled = false,
 }) {
   const isSecondary = variant === 'secondary';
+  const isDisabled = disabled || loading;
 
   return (
-    <Pressable
-      disabled={loading}
+    <Button
+      buttonColor={isSecondary ? colors.primarySoft : colors.primary}
+      disabled={isDisabled}
+      labelStyle={[styles.label, isSecondary ? styles.secondaryLabel : styles.primaryLabel]}
+      mode="contained"
       onPress={onPress}
-      style={[styles.button, isSecondary ? styles.secondaryButton : styles.primaryButton]}
+      style={[styles.button, isDisabled && styles.disabledButton]}
+      contentStyle={styles.content}
+      loading={loading}
     >
-      {loading ? (
-        <ActivityIndicator color={isSecondary ? colors.primary : '#ffffff'} />
-      ) : (
-        <Text style={[styles.label, isSecondary ? styles.secondaryLabel : styles.primaryLabel]}>
-          {label}
-        </Text>
-      )}
-    </Pressable>
+      {label}
+    </Button>
   );
 }
 
 const styles = StyleSheet.create({
   button: {
-    minHeight: 54,
     borderRadius: 16,
-    alignItems: 'center',
-    justifyContent: 'center',
   },
-  primaryButton: {
-    backgroundColor: colors.primary,
+  content: {
+    minHeight: 54,
   },
-  secondaryButton: {
-    backgroundColor: colors.primarySoft,
+  disabledButton: {
+    opacity: 0.55,
   },
   label: {
     fontSize: 15,

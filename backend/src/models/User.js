@@ -22,8 +22,17 @@ const userSchema = new mongoose.Schema(
     },
     role: {
       type: String,
-      enum: ['user', 'admin', 'worker'],
+      enum: ['user', 'admin', 'worker', 'super_admin'],
       default: 'user',
+    },
+    specialties: {
+      type: [String],
+      enum: ['electricity', 'water', 'waste', 'security', 'general'],
+      default: [],
+    },
+    isActive: {
+      type: Boolean,
+      default: true,
     },
     houseNumber: {
       type: String,

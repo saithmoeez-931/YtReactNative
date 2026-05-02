@@ -16,18 +16,18 @@ router
   .route('/')
   .post(
     protect,
-    authorize('user', 'admin'),
+    authorize('user', 'admin', 'super_admin'),
     upload.single('image'),
     asyncHandler(createComplaint),
   )
   .get(protect, asyncHandler(getComplaints));
 
 router.get('/:id', protect, asyncHandler(getComplaintById));
-router.patch('/:id/assign', protect, authorize('admin'), asyncHandler(assignComplaint));
+router.patch('/:id/assign', protect, authorize('admin', 'super_admin'), asyncHandler(assignComplaint));
 router.patch(
   '/:id/status',
   protect,
-  authorize('admin', 'worker', 'user'),
+  authorize('admin', 'super_admin', 'worker', 'user'),
   upload.single('proofImage'),
   asyncHandler(updateComplaintStatus),
 );

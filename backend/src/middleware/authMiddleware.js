@@ -1,5 +1,6 @@
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
+const demoStore = require('../store/demoStore');
 
 async function protect(req, res, next) {
   const authHeader = req.headers.authorization;
@@ -13,11 +14,19 @@ async function protect(req, res, next) {
 
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    req.user = await User.findById(decoded.userId).select('-password');
+    req.user =
+      process.env.DEMO_MODE === 'true'
+        ? demoStore.sanitizeUser(demoStore.findUserById(decoded.userId))
+        : await User.findById(decoded.userId).select('-password');
 
     if (!req.user) {
       res.status(401);
       throw new Error('User linked to this token no longer exists.');
+    }
+
+    if (req.user.isActive === false) {
+      res.status(403);
+      throw new Error('Your account is inactive. Please contact the society admin.');
     }
 
     next();

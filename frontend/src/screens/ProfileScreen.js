@@ -1,5 +1,6 @@
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
+import { Divider, Surface } from 'react-native-paper';
 import { useAuth } from '../context/AuthContext';
 import { colors } from '../theme/theme';
 import PrimaryButton from '../components/PrimaryButton';
@@ -10,20 +11,33 @@ export default function ProfileScreen() {
 
   return (
     <ScreenContainer>
-      <View style={styles.card}>
+      <Surface elevation={2} style={styles.card}>
         <Text style={styles.title}>{user?.name}</Text>
-        <Text style={styles.meta}>Email: {user?.email}</Text>
-        <Text style={styles.meta}>Role: {user?.role}</Text>
-        <Text style={styles.meta}>Block: {user?.block || 'Not provided'}</Text>
-        <Text style={styles.meta}>House Number: {user?.houseNumber || 'Not provided'}</Text>
-      </View>
+        <Text style={styles.rolePill}>{String(user?.role || '').toUpperCase()}</Text>
+        <Divider style={styles.divider} />
 
-      <View style={styles.card}>
-        <Text style={styles.sectionTitle}>How this screen helps you learn</Text>
+        <View style={styles.infoRow}>
+          <Text style={styles.infoLabel}>Email</Text>
+          <Text style={styles.infoValue}>{user?.email}</Text>
+        </View>
+
+        <View style={styles.infoRow}>
+          <Text style={styles.infoLabel}>Block</Text>
+          <Text style={styles.infoValue}>{user?.block || 'Not provided'}</Text>
+        </View>
+
+        <View style={styles.infoRow}>
+          <Text style={styles.infoLabel}>House Number</Text>
+          <Text style={styles.infoValue}>{user?.houseNumber || 'Not provided'}</Text>
+        </View>
+      </Surface>
+
+      <Surface elevation={1} style={styles.card}>
+        <Text style={styles.sectionTitle}>Account summary</Text>
         <Text style={styles.helper}>
-          This screen reads user data from the Auth Context. Context is React&apos;s way of sharing global state across many screens without manually passing props through every component.
+          Your role controls what you can access in the app. Residents submit and track complaints, admins manage requests, and workers handle assigned tasks.
         </Text>
-      </View>
+      </Surface>
 
       <PrimaryButton label="Logout" onPress={logout} />
     </ScreenContainer>
@@ -42,8 +56,33 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     color: colors.text,
   },
-  meta: {
+  rolePill: {
+    alignSelf: 'flex-start',
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    borderRadius: 999,
+    backgroundColor: colors.primarySoft,
+    color: colors.primary,
+    fontSize: 12,
+    fontWeight: '800',
+    letterSpacing: 0.6,
+  },
+  divider: {
+    backgroundColor: colors.border,
+    marginVertical: 4,
+  },
+  infoRow: {
+    gap: 4,
+  },
+  infoLabel: {
     color: colors.textMuted,
+    fontSize: 12,
+    fontWeight: '700',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  infoValue: {
+    color: colors.text,
     fontSize: 15,
   },
   sectionTitle: {

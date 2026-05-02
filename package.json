@@ -5,7 +5,8 @@
     "frontend": "npm --prefix frontend run start",
     "android": "npm --prefix frontend run android",
     "ios": "npm --prefix frontend run ios",
-    "backend": "npm --prefix backend run dev"
+    "backend": "npm --prefix backend run dev",
+    "seed": "npm --prefix backend run seed:demo"
   },
   "engines": {
     "node": ">= 20.0.0"

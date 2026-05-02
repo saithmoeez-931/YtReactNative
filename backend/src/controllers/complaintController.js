@@ -1,6 +1,8 @@
 const Complaint = require('../models/Complaint');
 const User = require('../models/User');
 const calculatePriority = require('../utils/calculatePriority');
+const categoryToSpecialty = require('../utils/categoryToSpecialty');
+const demoStore = require('../store/demoStore');
 
 async function createComplaint(req, res) {
   const { category, description, houseNumber, block, image } = req.body;
@@ -10,6 +12,21 @@ async function createComplaint(req, res) {
     throw new Error('Category, description, and block are required.');
   }
 
+  if (process.env.DEMO_MODE === 'true') {
+    const complaint = demoStore.createComplaint(
+      req.user,
+      { category, description, houseNumber, block, image },
+      req.file ? `/uploads/${req.file.filename}` : '',
+    );
+
+    res.status(201).json({
+      success: true,
+      message: 'Complaint created successfully.',
+      complaint,
+    });
+    return;
+  }
+
   const duplicateCandidates = await Complaint.find({
     category,
     block,
@@ -17,6 +34,12 @@ async function createComplaint(req, res) {
   }).sort({ createdAt: -1 });
 
   const duplicateCount = duplicateCandidates.length;
+  const requiredSpecialty = categoryToSpecialty(category);
+  const autoAssignedWorker = await User.findOne({
+    role: 'worker',
+    isActive: true,
+    specialties: requiredSpecialty,
+  }).sort({ updatedAt: 1, createdAt: 1 });
 
   const complaint = await Complaint.create({
     userId: req.user._id,
@@ -26,7 +49,18 @@ async function createComplaint(req, res) {
     block,
     image: req.file ? `/uploads/${req.file.filename}` : image || '',
     priority: calculatePriority(category, duplicateCount),
+    assignedTo: autoAssignedWorker?._id || null,
+    assignmentSource: autoAssignedWorker ? 'auto' : 'manual',
+    status: autoAssignedWorker ? 'In Progress' : 'Pending',
     possibleDuplicateOf: duplicateCandidates[0]?._id || null,
+    remarks: autoAssignedWorker
+      ? [
+          {
+            text: `Automatically assigned to ${autoAssignedWorker.name} based on ${requiredSpecialty} specialization.`,
+            addedBy: req.user._id,
+          },
+        ]
+      : [],
   });
 
   const populatedComplaint = await Complaint.findById(complaint._id)
@@ -38,13 +72,24 @@ async function createComplaint(req, res) {
     message:
       duplicateCount > 0
         ? 'Complaint created. Possible duplicate issues were detected in the same block.'
-        : 'Complaint created successfully.',
+        : autoAssignedWorker
+          ? `Complaint created and auto-assigned to ${autoAssignedWorker.name}.`
+          : 'Complaint created successfully.',
     complaint: populatedComplaint,
   });
 }
 
 async function getComplaints(req, res) {
   const { assignedOnly } = req.query;
+
+  if (process.env.DEMO_MODE === 'true') {
+    res.json({
+      success: true,
+      complaints: demoStore.getComplaintsForUser(req.user, assignedOnly),
+    });
+    return;
+  }
+
   const filters = {};
 
   if (req.user.role === 'user') {
@@ -68,6 +113,31 @@ async function getComplaints(req, res) {
 }
 
 async function getComplaintById(req, res) {
+  if (process.env.DEMO_MODE === 'true') {
+    const complaint = demoStore.getComplaintById(req.params.id);
+
+    if (!complaint) {
+      res.status(404);
+      throw new Error('Complaint not found.');
+    }
+
+    if (req.user.role === 'user' && complaint.userId._id !== req.user._id) {
+      res.status(403);
+      throw new Error('You can only view your own complaints.');
+    }
+
+    if (req.user.role === 'worker' && complaint.assignedTo?._id !== req.user._id) {
+      res.status(403);
+      throw new Error('You can only view complaints assigned to you.');
+    }
+
+    res.json({
+      success: true,
+      complaint,
+    });
+    return;
+  }
+
   const complaint = await Complaint.findById(req.params.id)
     .populate('userId', 'name email block houseNumber')
     .populate('assignedTo', 'name email role')
@@ -104,6 +174,41 @@ async function assignComplaint(req, res) {
   const workerId = req.body.workerId || req.query.workerId;
   const { remark } = req.body;
 
+  if (process.env.DEMO_MODE === 'true') {
+    const complaint = demoStore.getComplaintById(req.params.id);
+
+    if (!complaint) {
+      res.status(404);
+      throw new Error('Complaint not found.');
+    }
+
+    if (!workerId) {
+      res.status(400);
+      throw new Error('Worker ID is required.');
+    }
+
+    const worker = demoStore.findUserById(workerId);
+
+    if (!worker) {
+      res.status(400);
+      throw new Error('Selected worker ID was not found.');
+    }
+
+    if (worker.role !== 'worker') {
+      res.status(400);
+      throw new Error('Selected user exists but is not a worker.');
+    }
+
+    const updatedComplaint = demoStore.assignComplaint(req.params.id, workerId, req.user, remark);
+
+    res.json({
+      success: true,
+      message: 'Complaint assigned successfully.',
+      complaint: updatedComplaint,
+    });
+    return;
+  }
+
   const complaint = await Complaint.findById(req.params.id);
 
   if (!complaint) {
@@ -128,8 +233,14 @@ async function assignComplaint(req, res) {
     throw new Error('Selected user exists but is not a worker.');
   }
 
+  if (!worker.isActive) {
+    res.status(400);
+    throw new Error('Selected worker is inactive and cannot be assigned.');
+  }
+
   complaint.assignedTo = worker._id;
   complaint.status = 'In Progress';
+  complaint.assignmentSource = 'manual';
 
   if (remark) {
     complaint.remarks.push({
@@ -153,7 +264,52 @@ async function assignComplaint(req, res) {
 }
 
 async function updateComplaintStatus(req, res) {
-  const { status, remark, proofImage, rating, feedbackComment } = req.body;
+  const { status, remark, proofImage, rating, feedbackComment, priority } = req.body;
+
+  if (process.env.DEMO_MODE === 'true') {
+    const complaint = demoStore.getComplaintById(req.params.id);
+
+    if (!complaint) {
+      res.status(404);
+      throw new Error('Complaint not found.');
+    }
+
+    if (req.user.role === 'worker' && complaint.assignedTo?._id !== req.user._id) {
+      res.status(403);
+      throw new Error('You can only update complaints assigned to you.');
+    }
+
+    if (req.user.role === 'user') {
+      if (complaint.userId._id !== req.user._id) {
+        res.status(403);
+        throw new Error('You can only update your own complaints.');
+      }
+
+      if (status || remark || req.file || proofImage) {
+        res.status(403);
+        throw new Error('Residents can only submit feedback after resolution.');
+      }
+
+      if (complaint.status !== 'Resolved') {
+        res.status(400);
+        throw new Error('Feedback can only be added after the complaint is resolved.');
+      }
+    }
+
+    const updatedComplaint = demoStore.updateComplaintStatus(
+      req.params.id,
+      { status, remark, proofImage, rating, feedbackComment },
+      req.user,
+      req.file ? `/uploads/${req.file.filename}` : '',
+    );
+
+    res.json({
+      success: true,
+      message: 'Complaint updated successfully.',
+      complaint: updatedComplaint,
+    });
+    return;
+  }
 
   const complaint = await Complaint.findById(req.params.id);
 
@@ -192,6 +348,10 @@ async function updateComplaintStatus(req, res) {
 
   if (status) {
     complaint.status = status;
+  }
+
+  if (priority && ['admin', 'super_admin'].includes(req.user.role)) {
+    complaint.priority = priority;
   }
 
   if (remark) {

@@ -1,13 +1,14 @@
 import React from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text } from 'react-native';
+import { Surface } from 'react-native-paper';
 import { colors } from '../theme/theme';
 
 export default function StatCard({ label, value, accent = colors.primary }) {
   return (
-    <View style={[styles.card, { borderLeftColor: accent }]}>
+    <Surface elevation={1} style={[styles.card, { borderTopColor: accent }]}>
       <Text style={styles.value}>{value}</Text>
       <Text style={styles.label}>{label}</Text>
-    </View>
+    </Surface>
   );
 }
 
@@ -15,15 +16,10 @@ const styles = StyleSheet.create({
   card: {
     flex: 1,
     minWidth: '47%',
-    backgroundColor: colors.surface,
-    borderRadius: 18,
+    borderRadius: 22,
     padding: 18,
-    borderLeftWidth: 5,
-    shadowColor: '#0f172a',
-    shadowOpacity: 0.08,
-    shadowRadius: 12,
-    shadowOffset: { width: 0, height: 6 },
-    elevation: 3,
+    borderTopWidth: 5,
+    backgroundColor: colors.surface,
   },
   value: {
     fontSize: 28,

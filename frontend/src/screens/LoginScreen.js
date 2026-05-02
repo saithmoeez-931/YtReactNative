@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Alert, StyleSheet, Text, View } from 'react-native';
+import { Surface } from 'react-native-paper';
 import { useAuth } from '../context/AuthContext';
 import { colors } from '../theme/theme';
 import FormInput from '../components/FormInput';
@@ -8,7 +9,7 @@ import ScreenContainer from '../components/ScreenContainer';
 
 export default function LoginScreen({ navigation }) {
   const { login } = useAuth();
-  const [form, setForm] = useState({ email: '', password: '' });
+  const [form, setForm] = useState({ identifier: '', password: '' });
   const [loading, setLoading] = useState(false);
 
   const updateField = (key, value) => {
@@ -30,20 +31,19 @@ export default function LoginScreen({ navigation }) {
     <ScreenContainer contentStyle={styles.container}>
       <View style={styles.hero}>
         <Text style={styles.kicker}>Society Connect</Text>
-        <Text style={styles.title}>Manage complaints with clarity.</Text>
+        <Text style={styles.title}>Society issues, organized professionally.</Text>
         <Text style={styles.subtitle}>
-          Residents report issues, admins coordinate work, and staff close tasks from one shared app.
+          A cleaner residential support workflow for residents, admins, and maintenance staff.
         </Text>
       </View>
 
-      <View style={styles.card}>
+      <Surface elevation={2} style={styles.card}>
         <FormInput
           autoCapitalize="none"
-          keyboardType="email-address"
-          label="Email"
-          onChangeText={value => updateField('email', value)}
-          placeholder="resident@example.com"
-          value={form.email}
+          label="Email or User ID"
+          onChangeText={value => updateField('identifier', value)}
+          placeholder="sara.admin@societyconnect.com"
+          value={form.identifier}
         />
         <FormInput
           label="Password"
@@ -53,12 +53,15 @@ export default function LoginScreen({ navigation }) {
           value={form.password}
         />
         <PrimaryButton label="Login" loading={loading} onPress={handleLogin} />
+        <Text style={styles.helperText}>
+          Use a seeded demo account or sign up as a resident to test the flow.
+        </Text>
         <PrimaryButton
           label="Create new account"
           onPress={() => navigation.navigate('Register')}
           variant="secondary"
         />
-      </View>
+      </Surface>
     </ScreenContainer>
   );
 }
@@ -70,7 +73,7 @@ const styles = StyleSheet.create({
   },
   hero: {
     gap: 10,
-    marginBottom: 12,
+    marginBottom: 18,
   },
   kicker: {
     alignSelf: 'flex-start',
@@ -82,9 +85,10 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   title: {
-    fontSize: 34,
+    fontSize: 36,
     fontWeight: '800',
     color: colors.text,
+    lineHeight: 42,
   },
   subtitle: {
     fontSize: 15,
@@ -92,9 +96,14 @@ const styles = StyleSheet.create({
     color: colors.textMuted,
   },
   card: {
-    backgroundColor: colors.surface,
     borderRadius: 24,
     padding: 20,
     gap: 16,
+    backgroundColor: colors.surface,
+  },
+  helperText: {
+    fontSize: 13,
+    lineHeight: 20,
+    color: colors.textMuted,
   },
 });

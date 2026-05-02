@@ -31,11 +31,11 @@ async function request(path, options = {}) {
   const isFormData = options.body instanceof FormData;
 
   const response = await fetch(`${API_BASE_URL}${path}`, {
+    ...options,
     headers: {
       ...(isFormData ? {} : { 'Content-Type': 'application/json' }),
       ...(options.headers || {}),
     },
-    ...options,
   });
 
   const data = await response.json().catch(() => ({}));
@@ -84,9 +84,9 @@ export const api = {
     request(
       `/complaints/${complaintId}/assign?workerId=${encodeURIComponent(payload.workerId || '')}`,
       {
-      method: 'PATCH',
-      headers: { Authorization: `Bearer ${token}` },
-      body: JSON.stringify(payload),
+        method: 'PATCH',
+        headers: { Authorization: `Bearer ${token}` },
+        body: JSON.stringify(payload),
       },
     ),
   updateComplaintStatus: (token, complaintId, payload) =>
@@ -98,5 +98,33 @@ export const api = {
   getWorkers: token =>
     request('/users/workers', {
       headers: { Authorization: `Bearer ${token}` },
+    }),
+  getAdmins: token =>
+    request('/users/admins', {
+      headers: { Authorization: `Bearer ${token}` },
+    }),
+  createAdmin: (token, payload) =>
+    request('/users/admins', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}` },
+      body: JSON.stringify(payload),
+    }),
+  updateAdmin: (token, adminId, payload) =>
+    request(`/users/admins/${adminId}`, {
+      method: 'PATCH',
+      headers: { Authorization: `Bearer ${token}` },
+      body: JSON.stringify(payload),
+    }),
+  createWorker: (token, payload) =>
+    request('/users/workers', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}` },
+      body: JSON.stringify(payload),
+    }),
+  updateWorker: (token, workerId, payload) =>
+    request(`/users/workers/${workerId}`, {
+      method: 'PATCH',
+      headers: { Authorization: `Bearer ${token}` },
+      body: JSON.stringify(payload),
     }),
 };
