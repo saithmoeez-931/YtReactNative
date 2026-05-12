@@ -1,24 +1,34 @@
 const mongoose = require('mongoose');
 const User = require('../models/User');
 const generateToken = require('../utils/generateToken');
+const normalizeHouse = require('../utils/normalizeHouse');
 const demoStore = require('../store/demoStore');
 
 async function register(req, res) {
   const { name, email, password, houseNumber, block } = req.body;
+  const cleanName = String(name || '').trim();
+  const cleanEmail = String(email || '').trim().toLowerCase();
+  const cleanPassword = String(password || '').trim();
+  const cleanHouse = normalizeHouse(block, houseNumber);
 
-  if (!name || !email || !password) {
+  if (!cleanName || !cleanEmail || !cleanPassword) {
     res.status(400);
     throw new Error('Name, email, and password are required.');
   }
 
+  if (!cleanHouse.block || !cleanHouse.houseNumber) {
+    res.status(400);
+    throw new Error('Block and house number are required for resident registration.');
+  }
+
   if (process.env.DEMO_MODE === 'true') {
     const user = demoStore.createUser({
-      name,
-      email,
-      password,
+      name: cleanName,
+      email: cleanEmail,
+      password: cleanPassword,
       role: 'user',
-      houseNumber,
-      block,
+      houseNumber: cleanHouse.houseNumber,
+      block: cleanHouse.block,
     });
 
     res.status(201).json({
@@ -29,21 +39,43 @@ async function register(req, res) {
     return;
   }
 
-  const existingUser = await User.findOne({ email });
+  const existingUser = await User.findOne({ email: cleanEmail });
 
   if (existingUser) {
     res.status(400);
     throw new Error('An account with this email already exists.');
   }
 
-  const user = await User.create({
-    name,
-    email,
-    password,
+  const existingHouseResident = await User.findOne({
     role: 'user',
-    houseNumber,
-    block,
+    block: cleanHouse.block,
+    houseNumber: cleanHouse.houseNumber,
   });
+
+  if (existingHouseResident) {
+    res.status(400);
+    throw new Error('A resident account already exists for this house.');
+  }
+
+  let user;
+
+  try {
+    user = await User.create({
+      name: cleanName,
+      email: cleanEmail,
+      password: cleanPassword,
+      role: 'user',
+      houseNumber: cleanHouse.houseNumber,
+      block: cleanHouse.block,
+    });
+  } catch (error) {
+    if (error.code === 11000) {
+      res.status(400);
+      throw new Error('A resident account already exists for this house.');
+    }
+
+    throw error;
+  }
 
   res.status(201).json({
     success: true,

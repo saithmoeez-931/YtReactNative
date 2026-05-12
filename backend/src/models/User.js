@@ -63,4 +63,16 @@ userSchema.methods.comparePassword = function comparePassword(password) {
   return bcrypt.compare(password, this.password);
 };
 
+userSchema.index(
+  { role: 1, block: 1, houseNumber: 1 },
+  {
+    unique: true,
+    partialFilterExpression: {
+      role: 'user',
+      block: { $type: 'string', $gt: '' },
+      houseNumber: { $type: 'string', $gt: '' },
+    },
+  },
+);
+
 module.exports = mongoose.model('User', userSchema);

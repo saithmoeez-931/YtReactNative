@@ -95,4 +95,9 @@ const complaintSchema = new mongoose.Schema(
   },
 );
 
+complaintSchema.index({ userId: 1, createdAt: -1 });
+complaintSchema.index({ assignedTo: 1, createdAt: -1 });
+complaintSchema.index({ status: 1 });
+complaintSchema.index({ category: 1, block: 1, status: 1 });
+
 module.exports = mongoose.model('Complaint', complaintSchema);

@@ -4,6 +4,7 @@ const connectDatabase = require('../src/config/db');
 const User = require('../src/models/User');
 const Complaint = require('../src/models/Complaint');
 const calculatePriority = require('../src/utils/calculatePriority');
+const normalizeHouse = require('../src/utils/normalizeHouse');
 
 const demoUsers = [
   {
@@ -142,6 +143,7 @@ async function seedDemoUsers() {
   const userMap = new Map();
 
   for (const demoUser of demoUsers) {
+    const normalizedHouse = normalizeHouse(demoUser.block, demoUser.houseNumber);
     const existingUser = await User.findOne({ email: demoUser.email });
 
     if (existingUser) {
@@ -150,14 +152,18 @@ async function seedDemoUsers() {
       existingUser.role = demoUser.role;
       existingUser.specialties = demoUser.specialties || [];
       existingUser.isActive = true;
-      existingUser.houseNumber = demoUser.houseNumber;
-      existingUser.block = demoUser.block;
+      existingUser.houseNumber = normalizedHouse.houseNumber;
+      existingUser.block = normalizedHouse.block;
       await existingUser.save();
       userMap.set(existingUser.email, existingUser);
       continue;
     }
 
-    const createdUser = await User.create(demoUser);
+    const createdUser = await User.create({
+      ...demoUser,
+      houseNumber: normalizedHouse.houseNumber,
+      block: normalizedHouse.block,
+    });
     userMap.set(createdUser.email, createdUser);
   }
 

@@ -1,9 +1,11 @@
 import React, { useState } from 'react';
 import { Alert, StyleSheet, Text, View } from 'react-native';
-import { Surface } from 'react-native-paper';
+import Ionicons from '@expo/vector-icons/Ionicons';
+import { Surface, TextInput } from 'react-native-paper';
 import { useAuth } from '../context/AuthContext';
 import { colors } from '../theme/theme';
 import FormInput from '../components/FormInput';
+
 import PrimaryButton from '../components/PrimaryButton';
 import ScreenContainer from '../components/ScreenContainer';
 
@@ -11,6 +13,7 @@ export default function LoginScreen({ navigation }) {
   const { login } = useAuth();
   const [form, setForm] = useState({ identifier: '', password: '' });
   const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   const updateField = (key, value) => {
     setForm(current => ({ ...current, [key]: value }));
@@ -30,11 +33,12 @@ export default function LoginScreen({ navigation }) {
   return (
     <ScreenContainer contentStyle={styles.container}>
       <View style={styles.hero}>
+        <View style={styles.logoMark}>
+          <Ionicons color={colors.primary} name="business-outline" size={24} />
+        </View>
         <Text style={styles.kicker}>Society Connect</Text>
-        <Text style={styles.title}>Society issues, organized professionally.</Text>
-        <Text style={styles.subtitle}>
-          A cleaner residential support workflow for residents, admins, and maintenance staff.
-        </Text>
+        <Text style={styles.title}>A Smarter Way to Manage Society Complaints</Text>
+        <Text style={styles.subtitle}>Report, assign, and resolve issues without office visits.</Text>
       </View>
 
       <Surface elevation={2} style={styles.card}>
@@ -49,7 +53,13 @@ export default function LoginScreen({ navigation }) {
           label="Password"
           onChangeText={value => updateField('password', value)}
           placeholder="Enter your password"
-          secureTextEntry
+          right={
+            <TextInput.Icon
+              icon={showPassword ? 'eye-off-outline' : 'eye-outline'}
+              onPress={() => setShowPassword(current => !current)}
+            />
+          }
+          secureTextEntry={!showPassword}
           value={form.password}
         />
         <PrimaryButton label="Login" loading={loading} onPress={handleLogin} />
@@ -72,28 +82,43 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   hero: {
+    alignItems: 'center',
     gap: 10,
-    marginBottom: 18,
+    marginBottom: 20,
+    paddingHorizontal: 10,
+  },
+  logoMark: {
+    width: 54,
+    height: 54,
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.primarySoft,
+    borderWidth: 1,
+    borderColor: colors.border,
   },
   kicker: {
-    alignSelf: 'flex-start',
-    backgroundColor: colors.primarySoft,
     color: colors.primary,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 999,
-    fontWeight: '700',
+    fontSize: 12,
+    fontWeight: '900',
+    textTransform: 'uppercase',
+    letterSpacing: 1.2,
   },
   title: {
-    fontSize: 36,
-    fontWeight: '800',
+    fontSize: 28,
+    fontWeight: '900',
     color: colors.text,
-    lineHeight: 42,
+    lineHeight: 34,
+    textAlign: 'center',
+    letterSpacing: -0.5,
+    maxWidth: 320,
   },
   subtitle: {
-    fontSize: 15,
-    lineHeight: 24,
+    fontSize: 14,
+    lineHeight: 21,
     color: colors.textMuted,
+    textAlign: 'center',
+    maxWidth: 300,
   },
   card: {
     borderRadius: 24,

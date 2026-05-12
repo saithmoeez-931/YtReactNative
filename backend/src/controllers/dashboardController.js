@@ -20,32 +20,45 @@ async function getSummary(req, res) {
     filters.assignedTo = req.user._id;
   }
 
-  const [totalComplaints, pendingCount, inProgressCount, resolvedCount, byCategory] =
-    await Promise.all([
-      Complaint.countDocuments(filters),
-      Complaint.countDocuments({ ...filters, status: 'Pending' }),
-      Complaint.countDocuments({ ...filters, status: 'In Progress' }),
-      Complaint.countDocuments({ ...filters, status: 'Resolved' }),
-      Complaint.aggregate([
-        { $match: filters },
-        {
-          $group: {
-            _id: '$category',
-            count: { $sum: 1 },
+  const [summary] = await Complaint.aggregate([
+    { $match: filters },
+    {
+      $facet: {
+        statusCounts: [
+          {
+            $group: {
+              _id: '$status',
+              count: { $sum: 1 },
+            },
           },
-        },
-        { $sort: { count: -1 } },
-      ]),
-    ]);
+        ],
+        byCategory: [
+          {
+            $group: {
+              _id: '$category',
+              count: { $sum: 1 },
+            },
+          },
+          { $sort: { count: -1 } },
+        ],
+        total: [{ $count: 'count' }],
+      },
+    },
+  ]);
+
+  const statusCounts = (summary?.statusCounts || []).reduce((acc, item) => {
+    acc[item._id] = item.count;
+    return acc;
+  }, {});
 
   res.json({
     success: true,
     summary: {
-      totalComplaints,
-      pendingCount,
-      inProgressCount,
-      resolvedCount,
-      byCategory,
+      totalComplaints: summary?.total?.[0]?.count || 0,
+      pendingCount: statusCounts.Pending || 0,
+      inProgressCount: statusCounts['In Progress'] || 0,
+      resolvedCount: statusCounts.Resolved || 0,
+      byCategory: summary?.byCategory || [],
     },
   });
 }

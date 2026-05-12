@@ -7,7 +7,8 @@ async function protect(req, res, next) {
 
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
     res.status(401);
-    throw new Error('Authorization token is missing.');
+    next(new Error('Authorization token is missing.'));
+    return;
   }
 
   const token = authHeader.split(' ')[1];
@@ -21,18 +22,20 @@ async function protect(req, res, next) {
 
     if (!req.user) {
       res.status(401);
-      throw new Error('User linked to this token no longer exists.');
+      next(new Error('User linked to this token no longer exists.'));
+      return;
     }
 
     if (req.user.isActive === false) {
       res.status(403);
-      throw new Error('Your account is inactive. Please contact the society admin.');
+      next(new Error('Your account is inactive. Please contact the society admin.'));
+      return;
     }
 
     next();
   } catch (error) {
     res.status(401);
-    throw new Error('Invalid or expired token.');
+    next(new Error('Invalid or expired token.'));
   }
 }
 
