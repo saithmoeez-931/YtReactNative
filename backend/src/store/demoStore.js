@@ -21,6 +21,8 @@ const demoUsers = [
     role: 'worker',
     houseNumber: 'B-201',
     block: 'B',
+    specialties: ['electricity', 'water', 'waste', 'security', 'general'],
+    isActive: true,
   },
   {
     _id: createId(),
@@ -89,6 +91,8 @@ function createUser(payload) {
     email: payload.email.trim().toLowerCase(),
     password: payload.password,
     role: payload.role || 'user',
+    specialties: payload.specialties || [],
+    isActive: payload.isActive !== false,
     houseNumber: payload.houseNumber || '',
     block: payload.block || '',
   };
@@ -104,7 +108,7 @@ function listWorkers() {
     .sort((a, b) => a.name.localeCompare(b.name));
 }
 
-function createComplaint(user, payload, filePath) {
+function createComplaint(user, payload) {
   const openDuplicateCandidates = demoComplaints
     .filter(
       complaint =>
@@ -121,7 +125,7 @@ function createComplaint(user, payload, filePath) {
     block: payload.block,
     category: payload.category,
     description: payload.description,
-    image: filePath || payload.image || '',
+    image: '',
     proofImage: '',
     status: 'Pending',
     priority: calculatePriority(payload.category, openDuplicateCandidates.length),
@@ -182,7 +186,7 @@ function assignComplaint(complaintId, workerId, adminUser, remark) {
   return attachComplaintRelations(complaint);
 }
 
-function updateComplaintStatus(complaintId, payload, actor, filePath) {
+function updateComplaintStatus(complaintId, payload, actor) {
   const complaint = demoComplaints.find(entry => entry._id === complaintId);
 
   if (!complaint) {
@@ -201,12 +205,6 @@ function updateComplaintStatus(complaintId, payload, actor, filePath) {
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     });
-  }
-
-  if (filePath) {
-    complaint.proofImage = filePath;
-  } else if (payload.proofImage) {
-    complaint.proofImage = payload.proofImage;
   }
 
   if (payload.rating || payload.feedbackComment) {

@@ -18,6 +18,7 @@ import WorkerDetailsScreen from '../screens/WorkerDetailsScreen';
 import WorkerFormScreen from '../screens/WorkerFormScreen';
 import WorkerListScreen from '../screens/WorkerListScreen';
 import WorkerManagementScreen from '../screens/WorkerManagementScreen';
+import WorkerRecordScreen from '../screens/WorkerRecordScreen';
 
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -66,6 +67,7 @@ function StaffStack() {
       <Stack.Screen component={WorkerListScreen} name="WorkerList" options={{ title: 'Workers' }} />
       <Stack.Screen component={WorkerFormScreen} name="WorkerForm" options={{ title: 'Create Worker' }} />
       <Stack.Screen component={WorkerDetailsScreen} name="WorkerDetails" options={{ title: 'Edit Worker' }} />
+      <Stack.Screen component={WorkerRecordScreen} name="WorkerRecord" options={{ title: 'Worker Record' }} />
     </Stack.Navigator>
   );
 }
@@ -82,7 +84,7 @@ function DashboardTabs({ role }) {
       icon: 'document-text-outline',
       params: { role },
     },
-    ...(role === 'super_admin'
+    ...(['admin', 'super_admin'].includes(role)
       ? [{ name: 'Staff', component: StaffStack, icon: 'people-outline' }]
       : []),
     { name: 'Profile', component: ProfileScreen, icon: 'person-outline' },

@@ -4,6 +4,7 @@ import { Surface } from 'react-native-paper';
 import { useAuth } from '../context/AuthContext';
 import { colors } from '../theme/theme';
 import FormInput from '../components/FormInput';
+import PasswordInput from '../components/PasswordInput';
 import PrimaryButton from '../components/PrimaryButton';
 import ScreenContainer from '../components/ScreenContainer';
 
@@ -50,10 +51,9 @@ export default function RegisterScreen({ navigation }) {
           onChangeText={value => updateField('email', value)}
           value={form.email}
         />
-        <FormInput
+        <PasswordInput
           label="Password"
           onChangeText={value => updateField('password', value)}
-          secureTextEntry
           value={form.password}
         />
         <FormInput label="House Number" onChangeText={value => updateField('houseNumber', value)} value={form.houseNumber} />

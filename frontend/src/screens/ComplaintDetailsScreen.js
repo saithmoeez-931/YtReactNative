@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Alert, StyleSheet, Text, View } from 'react-native';
-import * as ImagePicker from 'expo-image-picker';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import {
   Button,
   Card,
@@ -13,6 +13,11 @@ import {
 import { useAuth } from '../context/AuthContext';
 import { api } from '../services/api';
 import { colors } from '../theme/theme';
+import {
+  formatDueDate,
+  formatTimeRemaining,
+  isComplaintOverdue,
+} from '../utils/timeLabels';
 import FeedbackBanner from '../components/FeedbackBanner';
 import FormInput from '../components/FormInput';
 import PrimaryButton from '../components/PrimaryButton';
@@ -20,7 +25,7 @@ import ScreenContainer from '../components/ScreenContainer';
 import StatusBadge from '../components/StatusBadge';
 
 const statusOptions = ['Pending', 'In Progress', 'Resolved'];
-const priorityOptions = ['Low', 'Medium', 'High'];
+const priorityOptions = ['Low', 'Medium', 'High', 'Urgent'];
 
 export default function ComplaintDetailsScreen({ route }) {
   const { token, user } = useAuth();
@@ -32,11 +37,11 @@ export default function ComplaintDetailsScreen({ route }) {
   const [selectedWorker, setSelectedWorker] = useState(null);
   const [assignRemark, setAssignRemark] = useState('');
   const [statusRemark, setStatusRemark] = useState('');
-  const [proofImage, setProofImage] = useState('');
   const [assigningWorkerId, setAssigningWorkerId] = useState('');
   const [loading, setLoading] = useState(false);
   const [selectedStatus, setSelectedStatus] = useState('');
   const [selectedPriority, setSelectedPriority] = useState('');
+  const [expectedResolutionHours, setExpectedResolutionHours] = useState('');
   const [feedbackMessage, setFeedbackMessage] = useState('');
   const [rating, setRating] = useState('');
   const [feedbackComment, setFeedbackComment] = useState('');
@@ -51,7 +56,7 @@ export default function ComplaintDetailsScreen({ route }) {
       setSelectedPriority(data.complaint.priority);
 
       if (canManageComplaints) {
-        const workerResponse = await api.getWorkers(token);
+        const workerResponse = await api.getActiveWorkers(token);
         setWorkers(workerResponse.workers);
       }
     } catch (error) {
@@ -69,11 +74,11 @@ export default function ComplaintDetailsScreen({ route }) {
       await api.updateComplaintStatus(token, complaintId, {
         status,
         remark: statusRemark,
-        proofImage,
         priority: selectedPriority,
+        expectedResolutionHours,
       });
       setStatusRemark('');
-      setProofImage('');
+      setExpectedResolutionHours('');
       await loadComplaint();
       return true;
     } catch (error) {
@@ -106,24 +111,6 @@ export default function ComplaintDetailsScreen({ route }) {
       Alert.alert('Unable to submit feedback', error.message);
     } finally {
       setLoading(false);
-    }
-  };
-
-  const pickProofImage = async () => {
-    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
-
-    if (!permission.granted) {
-      Alert.alert('Permission required', 'Please allow gallery access to upload proof.');
-      return;
-    }
-
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ['images'],
-      quality: 0.7,
-    });
-
-    if (!result.canceled && result.assets.length) {
-      setProofImage(result.assets[0].uri);
     }
   };
 
@@ -160,6 +147,7 @@ export default function ComplaintDetailsScreen({ route }) {
   const filteredWorkers = workers.filter(worker =>
     `${worker.name} ${worker.email}`.toLowerCase().includes(workerSearch.trim().toLowerCase()),
   );
+  const isOverdue = isComplaintOverdue(complaint);
 
   return (
     <ScreenContainer>
@@ -223,7 +211,25 @@ export default function ComplaintDetailsScreen({ route }) {
             <SummaryItem label="House" value={complaint.houseNumber || 'N/A'} />
             <SummaryItem label="Assigned" value={complaint.assignedTo?.name || 'Not assigned'} />
             <SummaryItem label="Remarks" value={String(complaint.remarks?.length || 0)} />
-            <SummaryItem label="Created" value={new Date(complaint.createdAt).toLocaleDateString()} />
+            <SummaryItem label="Due by" value={formatDueDate(complaint.dueAt)} />
+          </View>
+          <View style={[styles.timelinePanel, isOverdue && styles.timelinePanelOverdue]}>
+            <View style={styles.timelineIcon}>
+              <Ionicons
+                color={isOverdue ? colors.danger : colors.success}
+                name="time-outline"
+                size={22}
+              />
+            </View>
+            <View style={styles.timelineCopy}>
+              <Text style={[styles.timelineHeading, isOverdue && styles.overdueText]}>
+                {formatTimeRemaining(complaint.dueAt, complaint.status)}
+              </Text>
+              <Text style={styles.timelineMeta}>
+                Expected resolution: {complaint.expectedResolutionHours || 'N/A'} hour(s)
+              </Text>
+              <Text style={styles.timelineMeta}>Due by: {formatDueDate(complaint.dueAt)}</Text>
+            </View>
           </View>
           {complaint.assignmentSource ? (
             <Text style={styles.meta}>
@@ -333,6 +339,15 @@ export default function ComplaintDetailsScreen({ route }) {
               ))}
             </View>
           ) : null}
+          {canManageComplaints ? (
+            <FormInput
+              keyboardType="numeric"
+              label="Expected hours override (optional)"
+              onChangeText={setExpectedResolutionHours}
+              placeholder="Example: 6"
+              value={expectedResolutionHours}
+            />
+          ) : null}
           <FormInput
             label="Remark"
             multiline
@@ -343,12 +358,6 @@ export default function ComplaintDetailsScreen({ route }) {
             placeholder="Add a short update for residents and admins."
             value={statusRemark}
           />
-          <PrimaryButton
-            label={proofImage ? 'Change proof image' : 'Attach proof image'}
-            onPress={pickProofImage}
-            variant="secondary"
-          />
-          {proofImage ? <Text style={styles.meta}>Selected proof image: {proofImage}</Text> : null}
           <PrimaryButton
             label={`Save Status: ${selectedStatus || complaint.status}`}
             loading={loading}
@@ -484,6 +493,44 @@ const styles = StyleSheet.create({
   },
   meta: {
     color: colors.textMuted,
+  },
+  overdueText: {
+    color: colors.danger,
+    fontWeight: '800',
+  },
+  timelinePanel: {
+    flexDirection: 'row',
+    gap: 12,
+    borderRadius: 20,
+    padding: 14,
+    backgroundColor: colors.successSoft,
+    borderWidth: 1,
+    borderColor: '#bbf7d0',
+  },
+  timelinePanelOverdue: {
+    backgroundColor: colors.dangerSoft,
+    borderColor: '#fecaca',
+  },
+  timelineIcon: {
+    width: 42,
+    height: 42,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.surface,
+  },
+  timelineCopy: {
+    flex: 1,
+    gap: 3,
+  },
+  timelineHeading: {
+    color: colors.success,
+    fontSize: 16,
+    fontWeight: '900',
+  },
+  timelineMeta: {
+    color: colors.textMuted,
+    lineHeight: 20,
   },
   sectionTitle: {
     fontSize: 18,

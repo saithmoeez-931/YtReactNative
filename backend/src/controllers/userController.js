@@ -1,4 +1,5 @@
 const User = require('../models/User');
+const Complaint = require('../models/Complaint');
 const demoStore = require('../store/demoStore');
 
 async function getWorkers(req, res) {
@@ -10,15 +11,28 @@ async function getWorkers(req, res) {
     return;
   }
 
-  const filters = { role: 'worker' };
-
-  if (req.user.role !== 'super_admin') {
-    filters.isActive = true;
-  }
-
-  const workers = await User.find(filters)
+  const workers = await User.find({ role: 'worker' })
     .select('-password')
     .sort({ isActive: -1, name: 1 });
+
+  res.json({
+    success: true,
+    workers,
+  });
+}
+
+async function getActiveWorkers(req, res) {
+  if (process.env.DEMO_MODE === 'true') {
+    res.json({
+      success: true,
+      workers: demoStore.listWorkers().filter(worker => worker.isActive !== false),
+    });
+    return;
+  }
+
+  const workers = await User.find({ role: 'worker', isActive: true })
+    .select('-password')
+    .sort({ name: 1 });
 
   res.json({
     success: true,
@@ -242,11 +256,69 @@ async function updateWorker(req, res) {
   });
 }
 
+async function getWorkerRecord(req, res) {
+  const worker = await User.findOne({ _id: req.params.id, role: 'worker' })
+    .select('-password')
+    .lean();
+
+  if (!worker) {
+    res.status(404);
+    throw new Error('Worker not found.');
+  }
+
+  const [recordSummary] = await Complaint.aggregate([
+    {
+      $match: {
+        assignedTo: worker._id,
+      },
+    },
+    {
+      $facet: {
+        total: [{ $count: 'count' }],
+        statusCounts: [
+          {
+            $group: {
+              _id: '$status',
+              count: { $sum: 1 },
+            },
+          },
+        ],
+      },
+    },
+  ]);
+
+  const recentComplaints = await Complaint.find({ assignedTo: worker._id })
+    .populate('userId', 'name email block houseNumber')
+    .select('category description status priority block houseNumber createdAt updatedAt')
+    .sort({ updatedAt: -1, createdAt: -1 })
+    .limit(8)
+    .lean();
+
+  const statusCounts = (recordSummary?.statusCounts || []).reduce((acc, item) => {
+    acc[item._id] = item.count;
+    return acc;
+  }, {});
+
+  res.json({
+    success: true,
+    worker,
+    record: {
+      totalAssigned: recordSummary?.total?.[0]?.count || 0,
+      pendingCount: statusCounts.Pending || 0,
+      inProgressCount: statusCounts['In Progress'] || 0,
+      resolvedCount: statusCounts.Resolved || 0,
+      recentComplaints,
+    },
+  });
+}
+
 module.exports = {
   getAdmins,
   createAdmin,
   updateAdmin,
   getWorkers,
+  getActiveWorkers,
   createWorker,
   updateWorker,
+  getWorkerRecord,
 };

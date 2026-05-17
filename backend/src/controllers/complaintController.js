@@ -1,11 +1,15 @@
 const Complaint = require('../models/Complaint');
 const User = require('../models/User');
+const {
+  markWorkerAssigned,
+  selectBalancedWorker,
+} = require('../services/assignmentService');
 const calculatePriority = require('../utils/calculatePriority');
-const categoryToSpecialty = require('../utils/categoryToSpecialty');
+const calculateResolutionTimeline = require('../utils/calculateResolutionTimeline');
 const demoStore = require('../store/demoStore');
 
 async function createComplaint(req, res) {
-  const { category, description, houseNumber, block, image } = req.body;
+  const { category, description, houseNumber, block } = req.body;
 
   if (!category || !description || !block) {
     res.status(400);
@@ -15,8 +19,7 @@ async function createComplaint(req, res) {
   if (process.env.DEMO_MODE === 'true') {
     const complaint = demoStore.createComplaint(
       req.user,
-      { category, description, houseNumber, block, image },
-      req.file ? `/uploads/${req.file.filename}` : '',
+      { category, description, houseNumber, block },
     );
 
     res.status(201).json({
@@ -34,12 +37,19 @@ async function createComplaint(req, res) {
   }).sort({ createdAt: -1 });
 
   const duplicateCount = duplicateCandidates.length;
-  const requiredSpecialty = categoryToSpecialty(category);
-  const autoAssignedWorker = await User.findOne({
-    role: 'worker',
-    isActive: true,
-    specialties: requiredSpecialty,
-  }).sort({ updatedAt: 1, createdAt: 1 });
+  const {
+    worker: autoAssignedWorker,
+    requiredSpecialty,
+    activeComplaintCount,
+    activeComplaintCountAfterAssignment,
+    reason: assignmentReason,
+  } = await selectBalancedWorker(category);
+  const priority = calculatePriority(category, duplicateCount);
+  const timeline = calculateResolutionTimeline({
+    priority,
+    activeComplaintCount: activeComplaintCountAfterAssignment,
+    duplicateCount,
+  });
 
   const complaint = await Complaint.create({
     userId: req.user._id,
@@ -47,21 +57,26 @@ async function createComplaint(req, res) {
     description,
     houseNumber,
     block,
-    image: req.file ? `/uploads/${req.file.filename}` : image || '',
-    priority: calculatePriority(category, duplicateCount),
+    priority,
+    expectedResolutionHours: timeline.expectedResolutionHours,
+    dueAt: timeline.dueAt,
     assignedTo: autoAssignedWorker?._id || null,
     assignmentSource: autoAssignedWorker ? 'auto' : 'manual',
     status: autoAssignedWorker ? 'In Progress' : 'Pending',
     possibleDuplicateOf: duplicateCandidates[0]?._id || null,
-    remarks: autoAssignedWorker
-      ? [
-          {
-            text: `Automatically assigned to ${autoAssignedWorker.name} based on ${requiredSpecialty} specialization.`,
-            addedBy: req.user._id,
-          },
-        ]
-      : [],
+    remarks: [
+      {
+        text: autoAssignedWorker
+          ? `Auto-assigned to ${autoAssignedWorker.name}. Reason: ${assignmentReason} Workload changed from ${activeComplaintCount} to ${activeComplaintCountAfterAssignment} active complaint(s). Expected resolution: ${timeline.expectedResolutionHours} hour(s).`
+          : `Auto-assignment skipped. Reason: ${assignmentReason} Required specialty: ${requiredSpecialty}. Complaint is pending admin assignment. Expected resolution: ${timeline.expectedResolutionHours} hour(s).`,
+        addedBy: req.user._id,
+      },
+    ],
   });
+
+  if (autoAssignedWorker) {
+    await markWorkerAssigned(autoAssignedWorker._id);
+  }
 
   const populatedComplaint = await Complaint.findById(complaint._id)
     .populate('userId', 'name email block houseNumber')
@@ -73,8 +88,8 @@ async function createComplaint(req, res) {
       duplicateCount > 0
         ? 'Complaint created. Possible duplicate issues were detected in the same block.'
         : autoAssignedWorker
-          ? `Complaint created and auto-assigned to ${autoAssignedWorker.name}.`
-          : 'Complaint created successfully.',
+          ? `Complaint created and auto-assigned to ${autoAssignedWorker.name}. Active workload is now ${activeComplaintCountAfterAssignment}.`
+          : `Complaint created and kept pending. ${assignmentReason}`,
     complaint: populatedComplaint,
   });
 }
@@ -250,6 +265,7 @@ async function assignComplaint(req, res) {
   }
 
   await complaint.save();
+  await markWorkerAssigned(worker._id);
 
   const updatedComplaint = await Complaint.findById(complaint._id)
     .populate('userId', 'name email')
@@ -264,7 +280,14 @@ async function assignComplaint(req, res) {
 }
 
 async function updateComplaintStatus(req, res) {
-  const { status, remark, proofImage, rating, feedbackComment, priority } = req.body;
+  const {
+    status,
+    remark,
+    rating,
+    feedbackComment,
+    priority,
+    expectedResolutionHours,
+  } = req.body;
 
   if (process.env.DEMO_MODE === 'true') {
     const complaint = demoStore.getComplaintById(req.params.id);
@@ -285,7 +308,7 @@ async function updateComplaintStatus(req, res) {
         throw new Error('You can only update your own complaints.');
       }
 
-      if (status || remark || req.file || proofImage) {
+      if (status || remark) {
         res.status(403);
         throw new Error('Residents can only submit feedback after resolution.');
       }
@@ -298,9 +321,8 @@ async function updateComplaintStatus(req, res) {
 
     const updatedComplaint = demoStore.updateComplaintStatus(
       req.params.id,
-      { status, remark, proofImage, rating, feedbackComment },
+      { status, remark, rating, feedbackComment },
       req.user,
-      req.file ? `/uploads/${req.file.filename}` : '',
     );
 
     res.json({
@@ -335,7 +357,7 @@ async function updateComplaintStatus(req, res) {
       throw new Error('You can only update your own complaints.');
     }
 
-    if (status || remark || req.file || proofImage) {
+    if (status || remark) {
       res.status(403);
       throw new Error('Residents can only submit feedback after resolution.');
     }
@@ -352,6 +374,28 @@ async function updateComplaintStatus(req, res) {
 
   if (priority && ['admin', 'super_admin'].includes(req.user.role)) {
     complaint.priority = priority;
+
+    if (!expectedResolutionHours) {
+      const timeline = calculateResolutionTimeline({
+        priority,
+      });
+      complaint.expectedResolutionHours = timeline.expectedResolutionHours;
+      complaint.dueAt = timeline.dueAt;
+      complaint.deadlineOverridden = false;
+    }
+  }
+
+  if (expectedResolutionHours && ['admin', 'super_admin'].includes(req.user.role)) {
+    const cleanHours = Number(expectedResolutionHours);
+
+    if (!Number.isFinite(cleanHours) || cleanHours < 1) {
+      res.status(400);
+      throw new Error('Expected resolution hours must be a positive number.');
+    }
+
+    complaint.expectedResolutionHours = Math.ceil(cleanHours);
+    complaint.dueAt = new Date(Date.now() + Math.ceil(cleanHours) * 60 * 60 * 1000);
+    complaint.deadlineOverridden = true;
   }
 
   if (remark) {
@@ -359,12 +403,6 @@ async function updateComplaintStatus(req, res) {
       text: remark,
       addedBy: req.user._id,
     });
-  }
-
-  if (req.file) {
-    complaint.proofImage = `/uploads/${req.file.filename}`;
-  } else if (proofImage) {
-    complaint.proofImage = proofImage;
   }
 
   if (rating || feedbackComment) {

@@ -1,13 +1,7 @@
-const categoryMap = {
-  Electricity: 'electricity',
-  Water: 'water',
-  Waste: 'waste',
-  Security: 'security',
-  Other: 'general',
-};
+const { categorySpecialtyMap } = require('../constants/complaintTaxonomy');
 
 function categoryToSpecialty(category) {
-  return categoryMap[category] || 'general';
+  return categorySpecialtyMap[category] || 'general';
 }
 
 module.exports = categoryToSpecialty;

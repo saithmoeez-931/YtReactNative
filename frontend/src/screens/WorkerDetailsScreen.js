@@ -5,10 +5,10 @@ import { useAuth } from '../context/AuthContext';
 import { api } from '../services/api';
 import { colors } from '../theme/theme';
 import FormInput from '../components/FormInput';
+import PasswordInput from '../components/PasswordInput';
 import PrimaryButton from '../components/PrimaryButton';
 import ScreenContainer from '../components/ScreenContainer';
-
-const specialtyOptions = ['electricity', 'water', 'waste', 'security', 'general'];
+import { workerSpecialties } from '../constants/complaintTaxonomy';
 
 export default function WorkerDetailsScreen({ navigation, route }) {
   const { token } = useAuth();
@@ -70,7 +70,7 @@ export default function WorkerDetailsScreen({ navigation, route }) {
         <Text style={styles.subtitle}>Update worker profile, status, and complaint specialties.</Text>
         <FormInput label="Name" onChangeText={value => updateField('name', value)} value={form.name} />
         <FormInput label="Email" onChangeText={value => updateField('email', value)} value={form.email} />
-        <FormInput label="New password (optional)" onChangeText={value => updateField('password', value)} secureTextEntry value={form.password} />
+        <PasswordInput label="New password (optional)" onChangeText={value => updateField('password', value)} value={form.password} />
         <Button
           mode="outlined"
           onPress={() => updateField('isActive', !form.isActive)}
@@ -80,7 +80,7 @@ export default function WorkerDetailsScreen({ navigation, route }) {
         </Button>
         <Text style={styles.fieldLabel}>Specialties</Text>
         <View style={styles.chipRow}>
-          {specialtyOptions.map(option => (
+          {workerSpecialties.map(option => (
             <Chip key={option} selected={form.specialties.includes(option)} onPress={() => toggleSpecialty(option)}>
               {option}
             </Chip>

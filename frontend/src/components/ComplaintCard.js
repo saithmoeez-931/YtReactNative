@@ -3,11 +3,17 @@ import { StyleSheet, Text, View } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { Card, Chip } from 'react-native-paper';
 import { colors } from '../theme/theme';
+import {
+  formatDueDate,
+  formatTimeRemaining,
+  isComplaintOverdue,
+} from '../utils/timeLabels';
 import StatusBadge from './StatusBadge';
 
 export default function ComplaintCard({ complaint, onPress }) {
   const priorityStyle = priorityStyles[complaint.priority] || priorityStyles.Medium;
   const assigneeName = complaint.assignedTo?.name || 'Unassigned';
+  const overdue = isComplaintOverdue(complaint);
 
   return (
     <Card mode="elevated" onPress={onPress} style={styles.card}>
@@ -30,7 +36,20 @@ export default function ComplaintCard({ complaint, onPress }) {
           <InfoItem icon="business-outline" label={`Block ${complaint.block || 'N/A'}`} />
           <InfoItem icon="home-outline" label={`House ${complaint.houseNumber || 'N/A'}`} />
           <InfoItem icon="person-outline" label={assigneeName} />
-          <InfoItem icon="calendar-outline" label={new Date(complaint.createdAt).toLocaleDateString()} />
+        </View>
+
+        <View style={[styles.timelineBar, overdue && styles.timelineBarOverdue]}>
+          <View style={styles.timelineIcon}>
+            <Ionicons color={overdue ? colors.danger : colors.success} name="time-outline" size={18} />
+          </View>
+          <View style={styles.timelineTextGroup}>
+            <Text style={[styles.timelineTitle, overdue && styles.timelineTitleOverdue]}>
+              {formatTimeRemaining(complaint.dueAt, complaint.status)}
+            </Text>
+            <Text style={styles.timelineMeta}>
+              Due by {formatDueDate(complaint.dueAt)} | Expected {complaint.expectedResolutionHours || 'N/A'}h
+            </Text>
+          </View>
         </View>
       </Card.Content>
     </Card>
@@ -50,6 +69,7 @@ const priorityStyles = {
   Low: { color: colors.success, backgroundColor: colors.successSoft },
   Medium: { color: colors.warning, backgroundColor: colors.warningSoft },
   High: { color: colors.danger, backgroundColor: colors.dangerSoft },
+  Urgent: { color: '#ffffff', backgroundColor: colors.danger },
 };
 
 const styles = StyleSheet.create({
@@ -116,5 +136,43 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: colors.textMuted,
     fontWeight: '600',
+  },
+  timelineBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    borderRadius: 18,
+    padding: 12,
+    backgroundColor: colors.successSoft,
+    borderWidth: 1,
+    borderColor: '#bbf7d0',
+  },
+  timelineBarOverdue: {
+    backgroundColor: colors.dangerSoft,
+    borderColor: '#fecaca',
+  },
+  timelineIcon: {
+    width: 34,
+    height: 34,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.surface,
+  },
+  timelineTextGroup: {
+    flex: 1,
+  },
+  timelineTitle: {
+    color: colors.success,
+    fontWeight: '900',
+    fontSize: 14,
+  },
+  timelineTitleOverdue: {
+    color: colors.danger,
+  },
+  timelineMeta: {
+    color: colors.textMuted,
+    fontSize: 12,
+    marginTop: 2,
   },
 });

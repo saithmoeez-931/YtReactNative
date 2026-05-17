@@ -10,18 +10,22 @@ import PrimaryButton from '../components/PrimaryButton';
 import ScreenContainer from '../components/ScreenContainer';
 
 export default function WorkerManagementScreen({ navigation }) {
-  const { token } = useAuth();
+  const { token, user } = useAuth();
+  const canManageAdmins = user?.role === 'super_admin';
   const [admins, setAdmins] = useState([]);
   const [workers, setWorkers] = useState([]);
 
   const loadStaff = async () => {
     try {
-      const [adminData, workerData] = await Promise.all([
-        api.getAdmins(token),
-        api.getWorkers(token),
-      ]);
-      setAdmins(adminData.admins);
+      const workerData = await api.getWorkers(token);
       setWorkers(workerData.workers);
+
+      if (canManageAdmins) {
+        const adminData = await api.getAdmins(token);
+        setAdmins(adminData.admins);
+      } else {
+        setAdmins([]);
+      }
     } catch (error) {
       Alert.alert('Unable to load staff', error.message);
     }
@@ -30,7 +34,7 @@ export default function WorkerManagementScreen({ navigation }) {
   useFocusEffect(
     useCallback(() => {
       loadStaff();
-    }, [token]),
+    }, [token, canManageAdmins]),
   );
 
   const activeWorkers = workers.filter(worker => worker.isActive !== false).length;
@@ -39,29 +43,35 @@ export default function WorkerManagementScreen({ navigation }) {
   return (
     <ScreenContainer>
       <Surface elevation={2} style={styles.hero}>
-        <Text style={styles.eyebrow}>Super admin</Text>
-        <Text style={styles.title}>Staff Control Center</Text>
+        <Text style={styles.eyebrow}>{canManageAdmins ? 'Super admin' : 'Admin'}</Text>
+        <Text style={styles.title}>{canManageAdmins ? 'Staff Control Center' : 'Worker Control Center'}</Text>
         <Text style={styles.subtitle}>
-          Manage operational admins and specialized workers from focused screens.
+          {canManageAdmins
+            ? 'Manage operational admins and specialized workers from focused screens.'
+            : 'Create, view, and manage specialized workers for daily complaint operations.'}
         </Text>
       </Surface>
 
       <View style={styles.statsGrid}>
-        <StaffStat icon="shield-checkmark-outline" label="Admins" value={admins.length} />
+        {canManageAdmins ? (
+          <StaffStat icon="shield-checkmark-outline" label="Admins" value={admins.length} />
+        ) : null}
         <StaffStat icon="people-outline" label="Active Workers" value={activeWorkers} />
         <StaffStat icon="pause-circle-outline" label="Inactive" value={inactiveWorkers} />
       </View>
 
-      <Surface elevation={1} style={styles.actionCard}>
-        <Text style={styles.sectionTitle}>Admin accounts</Text>
-        <Text style={styles.helper}>Admins handle complaints but cannot manage staff setup.</Text>
-        <PrimaryButton label="View admins" onPress={() => navigation.navigate('AdminList')} />
-        <PrimaryButton
-          label="Create admin"
-          onPress={() => navigation.navigate('AdminForm')}
-          variant="secondary"
-        />
-      </Surface>
+      {canManageAdmins ? (
+        <Surface elevation={1} style={styles.actionCard}>
+          <Text style={styles.sectionTitle}>Admin accounts</Text>
+          <Text style={styles.helper}>Admins handle complaints and worker operations.</Text>
+          <PrimaryButton label="View admins" onPress={() => navigation.navigate('AdminList')} />
+          <PrimaryButton
+            label="Create admin"
+            onPress={() => navigation.navigate('AdminForm')}
+            variant="secondary"
+          />
+        </Surface>
+      ) : null}
 
       <Surface elevation={1} style={styles.actionCard}>
         <Text style={styles.sectionTitle}>Worker accounts</Text>

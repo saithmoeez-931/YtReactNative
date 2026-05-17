@@ -1,5 +1,6 @@
 const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
+const { workerSpecialties } = require('../constants/complaintTaxonomy');
 
 const userSchema = new mongoose.Schema(
   {
@@ -27,12 +28,16 @@ const userSchema = new mongoose.Schema(
     },
     specialties: {
       type: [String],
-      enum: ['electricity', 'water', 'waste', 'security', 'general'],
+      enum: workerSpecialties,
       default: [],
     },
     isActive: {
       type: Boolean,
       default: true,
+    },
+    lastAssignedAt: {
+      type: Date,
+      default: null,
     },
     houseNumber: {
       type: String,
@@ -74,5 +79,6 @@ userSchema.index(
     },
   },
 );
+userSchema.index({ role: 1, isActive: 1, specialties: 1, lastAssignedAt: 1 });
 
 module.exports = mongoose.model('User', userSchema);

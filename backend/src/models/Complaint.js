@@ -1,4 +1,5 @@
 const mongoose = require('mongoose');
+const { complaintCategories } = require('../constants/complaintTaxonomy');
 
 const remarkSchema = new mongoose.Schema(
   {
@@ -36,7 +37,7 @@ const complaintSchema = new mongoose.Schema(
     },
     category: {
       type: String,
-      enum: ['Electricity', 'Water', 'Waste', 'Security', 'Other'],
+      enum: complaintCategories,
       required: true,
     },
     description: {
@@ -59,8 +60,21 @@ const complaintSchema = new mongoose.Schema(
     },
     priority: {
       type: String,
-      enum: ['Low', 'Medium', 'High'],
+      enum: ['Low', 'Medium', 'High', 'Urgent'],
       default: 'Low',
+    },
+    expectedResolutionHours: {
+      type: Number,
+      min: 1,
+      default: null,
+    },
+    dueAt: {
+      type: Date,
+      default: null,
+    },
+    deadlineOverridden: {
+      type: Boolean,
+      default: false,
     },
     assignmentSource: {
       type: String,

@@ -1,39 +1,10 @@
 import { API_BASE_URL } from '../utils/config';
 
-function toFormData(payload) {
-  const formData = new FormData();
-
-  Object.entries(payload).forEach(([key, value]) => {
-    if (value === undefined || value === null || value === '') {
-      return;
-    }
-
-    if (
-      (key === 'image' || key === 'proofImage') &&
-      typeof value === 'string' &&
-      value.startsWith('file:')
-    ) {
-      formData.append(key, {
-        uri: value,
-        name: `${key}.jpg`,
-        type: 'image/jpeg',
-      });
-      return;
-    }
-
-    formData.append(key, value);
-  });
-
-  return formData;
-}
-
 async function request(path, options = {}) {
-  const isFormData = options.body instanceof FormData;
-
   const response = await fetch(`${API_BASE_URL}${path}`, {
     ...options,
     headers: {
-      ...(isFormData ? {} : { 'Content-Type': 'application/json' }),
+      'Content-Type': 'application/json',
       ...(options.headers || {}),
     },
   });
@@ -78,7 +49,7 @@ export const api = {
     request('/complaints', {
       method: 'POST',
       headers: { Authorization: `Bearer ${token}` },
-      body: toFormData(payload),
+      body: JSON.stringify(payload),
     }),
   assignComplaint: (token, complaintId, payload) =>
     request(
@@ -93,10 +64,14 @@ export const api = {
     request(`/complaints/${complaintId}/status`, {
       method: 'PATCH',
       headers: { Authorization: `Bearer ${token}` },
-      body: toFormData(payload),
+      body: JSON.stringify(payload),
     }),
   getWorkers: token =>
     request('/users/workers', {
+      headers: { Authorization: `Bearer ${token}` },
+    }),
+  getActiveWorkers: token =>
+    request('/users/workers/active', {
       headers: { Authorization: `Bearer ${token}` },
     }),
   getAdmins: token =>
@@ -126,5 +101,9 @@ export const api = {
       method: 'PATCH',
       headers: { Authorization: `Bearer ${token}` },
       body: JSON.stringify(payload),
+    }),
+  getWorkerRecord: (token, workerId) =>
+    request(`/users/workers/${workerId}/record`, {
+      headers: { Authorization: `Bearer ${token}` },
     }),
 };

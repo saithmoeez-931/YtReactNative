@@ -1,14 +1,12 @@
 import React, { useState } from 'react';
 import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
-import * as ImagePicker from 'expo-image-picker';
 import { useAuth } from '../context/AuthContext';
 import { api } from '../services/api';
 import { colors } from '../theme/theme';
 import FormInput from '../components/FormInput';
 import PrimaryButton from '../components/PrimaryButton';
 import ScreenContainer from '../components/ScreenContainer';
-
-const categories = ['Electricity', 'Water', 'Waste', 'Security', 'Other'];
+import { complaintCategories } from '../constants/complaintTaxonomy';
 
 export default function SubmitComplaintScreen() {
   const { token, user } = useAuth();
@@ -16,31 +14,12 @@ export default function SubmitComplaintScreen() {
   const [form, setForm] = useState({
     houseNumber: user?.houseNumber || '',
     block: user?.block || '',
-    category: categories[0],
+    category: complaintCategories[0],
     description: '',
-    image: '',
   });
 
   const updateField = (key, value) => {
     setForm(current => ({ ...current, [key]: value }));
-  };
-
-  const pickImage = async () => {
-    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
-
-    if (!permission.granted) {
-      Alert.alert('Permission required', 'Please allow gallery access to attach an image.');
-      return;
-    }
-
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ['images'],
-      quality: 0.7,
-    });
-
-    if (!result.canceled && result.assets.length) {
-      updateField('image', result.assets[0].uri);
-    }
   };
 
   const submitComplaint = async () => {
@@ -60,9 +39,8 @@ export default function SubmitComplaintScreen() {
       Alert.alert('Complaint submitted', response.message || 'Your complaint has been created successfully.');
       setForm(current => ({
         ...current,
-        category: categories[0],
+        category: complaintCategories[0],
         description: '',
-        image: '',
       }));
     } catch (error) {
       Alert.alert('Submission failed', error.message);
@@ -84,7 +62,7 @@ export default function SubmitComplaintScreen() {
         <View style={styles.categorySection}>
           <Text style={styles.fieldLabel}>Category</Text>
           <View style={styles.categoryList}>
-            {categories.map(category => (
+            {complaintCategories.map(category => (
               <Pressable
                 key={category}
                 onPress={() => updateField('category', category)}
@@ -112,12 +90,6 @@ export default function SubmitComplaintScreen() {
           placeholder="Describe the issue clearly so the staff knows what to fix."
           value={form.description}
         />
-        <PrimaryButton
-          label={form.image ? 'Change image attachment' : 'Attach image'}
-          onPress={pickImage}
-          variant="secondary"
-        />
-        {form.image ? <Text style={styles.imagePath}>Selected image: {form.image}</Text> : null}
         <PrimaryButton label="Submit complaint" loading={loading} onPress={submitComplaint} />
       </View>
     </ScreenContainer>
@@ -169,9 +141,5 @@ const styles = StyleSheet.create({
   },
   categoryChipTextActive: {
     color: '#ffffff',
-  },
-  imagePath: {
-    color: colors.textMuted,
-    fontSize: 12,
   },
 });

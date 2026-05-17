@@ -7,7 +7,6 @@ const {
   updateComplaintStatus,
 } = require('../controllers/complaintController');
 const { authorize, protect } = require('../middleware/authMiddleware');
-const upload = require('../middleware/uploadMiddleware');
 const asyncHandler = require('../utils/asyncHandler');
 
 const router = express.Router();
@@ -17,7 +16,6 @@ router
   .post(
     protect,
     authorize('user', 'admin', 'super_admin'),
-    upload.single('image'),
     asyncHandler(createComplaint),
   )
   .get(protect, asyncHandler(getComplaints));
@@ -28,7 +26,6 @@ router.patch(
   '/:id/status',
   protect,
   authorize('admin', 'super_admin', 'worker', 'user'),
-  upload.single('proofImage'),
   asyncHandler(updateComplaintStatus),
 );
 

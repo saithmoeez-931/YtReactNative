@@ -5,6 +5,7 @@ import { useAuth } from '../context/AuthContext';
 import { api } from '../services/api';
 import { colors } from '../theme/theme';
 import FormInput from '../components/FormInput';
+import PasswordInput from '../components/PasswordInput';
 import PrimaryButton from '../components/PrimaryButton';
 import ScreenContainer from '../components/ScreenContainer';
 
@@ -59,10 +60,9 @@ export default function AdminFormScreen({ navigation, route }) {
         <Text style={styles.subtitle}>Admins can manage complaints but cannot create staff accounts.</Text>
         <FormInput label="Name" onChangeText={value => updateField('name', value)} value={form.name} />
         <FormInput label="Email" onChangeText={value => updateField('email', value)} value={form.email} />
-        <FormInput
+        <PasswordInput
           label={editing ? 'New password (optional)' : 'Password'}
           onChangeText={value => updateField('password', value)}
-          secureTextEntry
           value={form.password}
         />
         <PrimaryButton label={editing ? 'Save admin' : 'Create admin'} loading={loading} onPress={handleSave} />

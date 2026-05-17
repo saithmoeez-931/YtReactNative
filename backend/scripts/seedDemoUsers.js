@@ -4,6 +4,7 @@ const connectDatabase = require('../src/config/db');
 const User = require('../src/models/User');
 const Complaint = require('../src/models/Complaint');
 const calculatePriority = require('../src/utils/calculatePriority');
+const calculateResolutionTimeline = require('../src/utils/calculateResolutionTimeline');
 const normalizeHouse = require('../src/utils/normalizeHouse');
 
 const demoUsers = [
@@ -30,7 +31,7 @@ const demoUsers = [
     email: 'ali.worker@societyconnect.com',
     password: 'Worker123',
     role: 'worker',
-    specialties: ['electricity', 'security'],
+    specialties: ['electricity', 'security', 'maintenance'],
     houseNumber: 'B-201',
     block: 'B',
   },
@@ -39,8 +40,17 @@ const demoUsers = [
     email: 'mina.worker@societyconnect.com',
     password: 'Worker123',
     role: 'worker',
-    specialties: ['water', 'waste', 'general'],
+    specialties: ['water', 'waste', 'cleaning', 'plumbing', 'general'],
     houseNumber: 'B-202',
+    block: 'B',
+  },
+  {
+    name: 'Omar Worker',
+    email: 'omar.worker@societyconnect.com',
+    password: 'Worker123',
+    role: 'worker',
+    specialties: ['maintenance', 'parking', 'plumbing'],
+    houseNumber: 'B-203',
     block: 'B',
   },
   {
@@ -135,10 +145,40 @@ const demoComplaints = [
     assignedWorkerEmail: null,
     remarks: [],
   },
+  {
+    email: 'bilal.sheikh@societyconnect.com',
+    category: 'Plumbing',
+    description: 'Bathroom drain is blocked and water is overflowing.',
+    block: 'D',
+    houseNumber: 'D-110',
+    status: 'Pending',
+    assignedWorkerEmail: null,
+    remarks: [],
+  },
+  {
+    email: 'ahmed.khan@societyconnect.com',
+    category: 'Parking',
+    description: 'Unauthorized car is blocking the resident parking lane.',
+    block: 'C',
+    houseNumber: 'C-301',
+    status: 'In Progress',
+    assignedWorkerEmail: 'omar.worker@societyconnect.com',
+    remarks: [
+      { by: 'sara.admin@societyconnect.com', text: 'Assigned to Omar for parking lane inspection.' },
+    ],
+  },
 ];
 
 async function seedDemoUsers() {
   await connectDatabase();
+  await User.updateMany(
+    { specialties: 'elevator' },
+    { $pull: { specialties: 'elevator' } },
+  );
+  await Complaint.updateMany(
+    { category: 'Elevator' },
+    { $set: { category: 'Maintenance' } },
+  );
 
   const userMap = new Map();
 
@@ -180,13 +220,18 @@ async function seedDemoUsers() {
     });
 
     if (existingComplaint) {
+      const priority = calculatePriority(complaintSeed.category);
+      const timeline = calculateResolutionTimeline({ priority });
       existingComplaint.category = complaintSeed.category;
       existingComplaint.block = complaintSeed.block;
       existingComplaint.houseNumber = complaintSeed.houseNumber;
       existingComplaint.status = complaintSeed.status;
       existingComplaint.assignedTo = assignedWorker?._id || null;
       existingComplaint.assignmentSource = assignedWorker ? 'manual' : 'auto';
-      existingComplaint.priority = calculatePriority(complaintSeed.category);
+      existingComplaint.priority = priority;
+      existingComplaint.expectedResolutionHours = timeline.expectedResolutionHours;
+      existingComplaint.dueAt = timeline.dueAt;
+      existingComplaint.deadlineOverridden = false;
       existingComplaint.feedback = complaintSeed.feedback || undefined;
       existingComplaint.remarks = complaintSeed.remarks.map(item => ({
         text: item.text,
@@ -197,6 +242,9 @@ async function seedDemoUsers() {
       continue;
     }
 
+    const priority = calculatePriority(complaintSeed.category);
+    const timeline = calculateResolutionTimeline({ priority });
+
     await Complaint.create({
       userId: resident._id,
       category: complaintSeed.category,
@@ -206,7 +254,10 @@ async function seedDemoUsers() {
       status: complaintSeed.status,
       assignedTo: assignedWorker?._id || null,
       assignmentSource: assignedWorker ? 'manual' : 'auto',
-      priority: calculatePriority(complaintSeed.category),
+      priority,
+      expectedResolutionHours: timeline.expectedResolutionHours,
+      dueAt: timeline.dueAt,
+      deadlineOverridden: false,
       remarks: complaintSeed.remarks.map(item => ({
         text: item.text,
         addedBy: userMap.get(item.by)?._id || adminUser._id,

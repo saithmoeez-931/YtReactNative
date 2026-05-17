@@ -1,16 +1,14 @@
-const categoryWeight = {
-  Electricity: 3,
-  Security: 3,
-  Water: 2,
-  Waste: 2,
-  Other: 1,
-};
+const { categoryPriorityWeight } = require('../constants/complaintTaxonomy');
 
 function calculatePriority(category, duplicateCount = 0) {
-  const baseScore = categoryWeight[category] || 1;
+  const baseScore = categoryPriorityWeight[category] || 1;
   const totalScore = baseScore + duplicateCount;
 
-  if (totalScore >= 4) {
+  if (totalScore >= 5) {
+    return 'Urgent';
+  }
+
+  if (totalScore >= 3) {
     return 'High';
   }
 

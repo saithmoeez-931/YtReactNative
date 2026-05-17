@@ -94,9 +94,18 @@ export default function WorkerListScreen({ navigation }) {
               <Text style={styles.meta}>{worker.email}</Text>
               <Text style={styles.meta}>Specialties: {(worker.specialties || ['general']).join(', ')}</Text>
             </View>
-            <Button mode="outlined" onPress={() => navigation.navigate('WorkerDetails', { worker })}>
-              Edit
-            </Button>
+            <View style={styles.actions}>
+              <Button
+                compact
+                mode="contained-tonal"
+                onPress={() => navigation.navigate('WorkerRecord', { worker, workerId: worker._id })}
+              >
+                Record
+              </Button>
+              <Button compact mode="outlined" onPress={() => navigation.navigate('WorkerDetails', { worker })}>
+                Edit
+              </Button>
+            </View>
           </Surface>
         );
       })}
@@ -122,4 +131,5 @@ const styles = StyleSheet.create({
   status: { fontWeight: '900', fontSize: 12 },
   active: { color: colors.success },
   inactive: { color: colors.danger },
+  actions: { gap: 8 },
 });

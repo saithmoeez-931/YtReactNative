@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
 import { Alert, StyleSheet, Text, View } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { Surface, TextInput } from 'react-native-paper';
+import { Surface } from 'react-native-paper';
 import { useAuth } from '../context/AuthContext';
 import { colors } from '../theme/theme';
 import FormInput from '../components/FormInput';
+import PasswordInput from '../components/PasswordInput';
 
 import PrimaryButton from '../components/PrimaryButton';
 import ScreenContainer from '../components/ScreenContainer';
@@ -13,7 +14,6 @@ export default function LoginScreen({ navigation }) {
   const { login } = useAuth();
   const [form, setForm] = useState({ identifier: '', password: '' });
   const [loading, setLoading] = useState(false);
-  const [showPassword, setShowPassword] = useState(false);
 
   const updateField = (key, value) => {
     setForm(current => ({ ...current, [key]: value }));
@@ -49,17 +49,10 @@ export default function LoginScreen({ navigation }) {
           placeholder="sara.admin@societyconnect.com"
           value={form.identifier}
         />
-        <FormInput
+        <PasswordInput
           label="Password"
           onChangeText={value => updateField('password', value)}
           placeholder="Enter your password"
-          right={
-            <TextInput.Icon
-              icon={showPassword ? 'eye-off-outline' : 'eye-outline'}
-              onPress={() => setShowPassword(current => !current)}
-            />
-          }
-          secureTextEntry={!showPassword}
           value={form.password}
         />
         <PrimaryButton label="Login" loading={loading} onPress={handleLogin} />
