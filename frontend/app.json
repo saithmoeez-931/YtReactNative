@@ -12,8 +12,16 @@
       "supportsTablet": true
     },
     "android": {
+      "package": "com.societyconnect.app",
+      "versionCode": 2,
+      "usesCleartextTraffic": true,
       "adaptiveIcon": {
         "backgroundColor": "#f3f4f6"
+      }
+    },
+    "extra": {
+      "eas": {
+        "projectId": "e7fe5a4e-1e28-4c8b-9c55-63dca9694684"
       }
     }
   }

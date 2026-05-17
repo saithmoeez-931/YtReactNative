@@ -7,7 +7,8 @@
     "start": "expo start",
     "android": "expo run:android",
     "ios": "expo run:ios",
-    "web": "expo start --web"
+    "web": "expo start --web",
+    "apk": "eas build -p android --profile preview"
   },
   "dependencies": {
     "@expo/vector-icons": "14.0.4",
@@ -26,5 +27,8 @@
     "react-native-paper": "^5.15.1",
     "react-native-safe-area-context": "5.4.0",
     "react-native-screens": "~4.11.1"
+  },
+  "devDependencies": {
+    "eas-cli": "^18.13.0"
   }
 }
