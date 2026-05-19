@@ -86,11 +86,22 @@ export default function WorkerDetailsScreen({ navigation, route }) {
         </Button>
         <Text style={styles.fieldLabel}>Specialties</Text>
         <View style={styles.chipRow}>
-          {workerSpecialties.map(option => (
-            <Chip key={option} selected={form.specialties.includes(option)} onPress={() => toggleSpecialty(option)}>
-              {option}
-            </Chip>
-          ))}
+          {workerSpecialties.map(option => {
+            const selected = form.specialties.includes(option);
+
+            return (
+              <Chip
+                key={option}
+                mode="outlined"
+                onPress={() => toggleSpecialty(option)}
+                selected={false}
+                style={[styles.specialtyChip, selected && styles.specialtyChipSelected]}
+                textStyle={[styles.specialtyChipText, selected && styles.specialtyChipTextSelected]}
+              >
+                {selected ? `✓ ${option}` : option}
+              </Chip>
+            );
+          })}
         </View>
         <PrimaryButton label="Save worker" loading={loading} onPress={handleSave} />
       </Surface>
@@ -104,4 +115,20 @@ const styles = StyleSheet.create({
   subtitle: { color: colors.textMuted, lineHeight: 22 },
   fieldLabel: { color: colors.text, fontWeight: '800' },
   chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
+  specialtyChip: {
+    backgroundColor: colors.surface,
+    borderColor: colors.border,
+    borderWidth: 1,
+  },
+  specialtyChipSelected: {
+    backgroundColor: colors.primarySoft,
+    borderColor: colors.primary,
+  },
+  specialtyChipText: {
+    color: colors.textMuted,
+    fontWeight: '700',
+  },
+  specialtyChipTextSelected: {
+    color: colors.primary,
+  },
 });
