@@ -1,6 +1,5 @@
 import React, { useEffect, useState } from 'react';
 import { Alert, StyleSheet, Text, View } from 'react-native';
-import Ionicons from '@expo/vector-icons/Ionicons';
 import {
   Button,
   Card,
@@ -18,11 +17,13 @@ import {
   formatTimeRemaining,
   isComplaintOverdue,
 } from '../utils/timeLabels';
+import AppIcon from '../components/AppIcon';
 import FeedbackBanner from '../components/FeedbackBanner';
 import FormInput from '../components/FormInput';
 import PrimaryButton from '../components/PrimaryButton';
 import ScreenContainer from '../components/ScreenContainer';
 import StatusBadge from '../components/StatusBadge';
+import { cleanText, isUsefulText } from '../utils/validation';
 
 const statusOptions = ['Pending', 'In Progress', 'Resolved'];
 const priorityOptions = ['Low', 'Medium', 'High', 'Urgent'];
@@ -45,6 +46,7 @@ export default function ComplaintDetailsScreen({ route }) {
   const [feedbackMessage, setFeedbackMessage] = useState('');
   const [rating, setRating] = useState('');
   const [feedbackComment, setFeedbackComment] = useState('');
+  const [fieldErrors, setFieldErrors] = useState({});
   const canManageComplaints = ['admin', 'super_admin'].includes(user?.role);
   const isResident = user?.role === 'user';
 
@@ -69,13 +71,43 @@ export default function ComplaintDetailsScreen({ route }) {
   }, [complaintId]);
 
   const handleStatusUpdate = async status => {
+    if (loading) {
+      return false;
+    }
+
+    const cleanRemark = cleanText(statusRemark);
+    const cleanHours = cleanText(expectedResolutionHours);
+    const nextErrors = {};
+
+    if (!statusOptions.includes(status)) {
+      nextErrors.status = 'Select a valid status.';
+    }
+
+    if (cleanRemark && !isUsefulText(cleanRemark, 5)) {
+      nextErrors.statusRemark = 'Remark must contain at least 5 meaningful characters.';
+    }
+
+    if (canManageComplaints && cleanHours) {
+      const numericHours = Number(cleanHours);
+
+      if (!Number.isFinite(numericHours) || numericHours < 1 || numericHours > 240) {
+        nextErrors.expectedResolutionHours = 'Expected hours must be between 1 and 240.';
+      }
+    }
+
+    setFieldErrors(nextErrors);
+
+    if (Object.keys(nextErrors).length) {
+      return false;
+    }
+
     try {
       setLoading(true);
       await api.updateComplaintStatus(token, complaintId, {
         status,
-        remark: statusRemark,
+        remark: cleanRemark,
         priority: selectedPriority,
-        expectedResolutionHours,
+        expectedResolutionHours: cleanHours,
       });
       setStatusRemark('');
       setExpectedResolutionHours('');
@@ -90,10 +122,25 @@ export default function ComplaintDetailsScreen({ route }) {
   };
 
   const handleFeedbackSubmit = async () => {
+    if (loading) {
+      return;
+    }
+
     const numericRating = Number(rating);
+    const cleanComment = cleanText(feedbackComment);
+    const nextErrors = {};
 
     if (!numericRating || numericRating < 1 || numericRating > 5) {
-      Alert.alert('Invalid rating', 'Please enter a rating from 1 to 5.');
+      nextErrors.rating = 'Please enter a rating from 1 to 5.';
+    }
+
+    if (cleanComment && !isUsefulText(cleanComment, 5)) {
+      nextErrors.feedbackComment = 'Comment must contain at least 5 meaningful characters.';
+    }
+
+    setFieldErrors(nextErrors);
+
+    if (Object.keys(nextErrors).length) {
       return;
     }
 
@@ -101,7 +148,7 @@ export default function ComplaintDetailsScreen({ route }) {
       setLoading(true);
       await api.updateComplaintStatus(token, complaintId, {
         rating: numericRating,
-        feedbackComment,
+        feedbackComment: cleanComment,
       });
       setRating('');
       setFeedbackComment('');
@@ -115,7 +162,22 @@ export default function ComplaintDetailsScreen({ route }) {
   };
 
   const handleAssign = async worker => {
+    if (assigningWorkerId) {
+      return;
+    }
+
+    const cleanRemark = cleanText(assignRemark);
+
+    if (cleanRemark && !isUsefulText(cleanRemark, 5)) {
+      setFieldErrors(current => ({
+        ...current,
+        assignRemark: 'Remark must contain at least 5 meaningful characters.',
+      }));
+      return;
+    }
+
     if (!worker) {
+      setFieldErrors(current => ({ ...current, selectedWorker: 'Select a worker before assigning.' }));
       return;
     }
 
@@ -123,7 +185,7 @@ export default function ComplaintDetailsScreen({ route }) {
       setAssigningWorkerId(worker._id);
       await api.assignComplaint(token, complaintId, {
         workerId: worker._id,
-        remark: assignRemark,
+        remark: cleanRemark,
       });
       setAssignRemark('');
       setSelectedWorker(worker);
@@ -215,7 +277,7 @@ export default function ComplaintDetailsScreen({ route }) {
           </View>
           <View style={[styles.timelinePanel, isOverdue && styles.timelinePanelOverdue]}>
             <View style={styles.timelineIcon}>
-              <Ionicons
+              <AppIcon
                 color={isOverdue ? colors.danger : colors.success}
                 name="time-outline"
                 size={22}
@@ -246,6 +308,7 @@ export default function ComplaintDetailsScreen({ route }) {
             Choose one worker from a searchable list, then confirm assignment with a single action.
           </Text>
           <FormInput
+            error={fieldErrors.assignRemark}
             label="Assignment remark"
             multiline
             onChangeText={value => {
@@ -255,6 +318,7 @@ export default function ComplaintDetailsScreen({ route }) {
             placeholder="Optional note for the worker"
             value={assignRemark}
           />
+          {fieldErrors.selectedWorker ? <Text style={styles.errorText}>{fieldErrors.selectedWorker}</Text> : null}
           <Surface elevation={0} style={styles.selectedWorkerCard}>
             <Text style={styles.selectedWorkerLabel}>Selected worker</Text>
             <Text style={styles.selectedWorkerValue}>
@@ -341,6 +405,7 @@ export default function ComplaintDetailsScreen({ route }) {
           ) : null}
           {canManageComplaints ? (
             <FormInput
+              error={fieldErrors.expectedResolutionHours}
               keyboardType="numeric"
               label="Expected hours override (optional)"
               onChangeText={setExpectedResolutionHours}
@@ -349,6 +414,7 @@ export default function ComplaintDetailsScreen({ route }) {
             />
           ) : null}
           <FormInput
+            error={fieldErrors.statusRemark}
             label="Remark"
             multiline
             onChangeText={value => {
@@ -384,6 +450,7 @@ export default function ComplaintDetailsScreen({ route }) {
             <>
               <Text style={styles.helperText}>Rate the resolution quality after your issue is closed.</Text>
               <FormInput
+                error={fieldErrors.rating}
                 keyboardType="numeric"
                 label="Rating (1 to 5)"
                 onChangeText={setRating}
@@ -391,6 +458,7 @@ export default function ComplaintDetailsScreen({ route }) {
                 value={rating}
               />
               <FormInput
+                error={fieldErrors.feedbackComment}
                 label="Comment"
                 multiline
                 onChangeText={setFeedbackComment}
@@ -618,5 +686,9 @@ const styles = StyleSheet.create({
   feedbackRating: {
     color: colors.text,
     fontWeight: '900',
+  },
+  errorText: {
+    color: colors.danger,
+    fontSize: 12,
   },
 });

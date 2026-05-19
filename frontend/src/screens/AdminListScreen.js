@@ -1,11 +1,11 @@
 import React, { useCallback, useMemo, useState } from 'react';
 import { Alert, StyleSheet, Text, View } from 'react-native';
-import Ionicons from '@expo/vector-icons/Ionicons';
 import { useFocusEffect } from '@react-navigation/native';
 import { Button, Searchbar, Surface } from 'react-native-paper';
 import { useAuth } from '../context/AuthContext';
 import { api } from '../services/api';
 import { colors } from '../theme/theme';
+import AppIcon from '../components/AppIcon';
 import PrimaryButton from '../components/PrimaryButton';
 import ScreenContainer from '../components/ScreenContainer';
 
@@ -57,7 +57,7 @@ export default function AdminListScreen({ navigation }) {
 
       {filteredAdmins.map(admin => (
         <Surface elevation={1} key={admin._id} style={styles.rowCard}>
-          <Ionicons color={colors.primary} name="shield-checkmark-outline" size={24} />
+          <AppIcon color={colors.primary} name="shield-checkmark-outline" size={24} />
           <View style={styles.identity}>
             <Text style={styles.name}>{admin.name}</Text>
             <Text style={styles.meta}>{admin.email}</Text>

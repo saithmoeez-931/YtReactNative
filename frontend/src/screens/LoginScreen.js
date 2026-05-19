@@ -1,18 +1,20 @@
 import React, { useState } from 'react';
 import { Alert, StyleSheet, Text, View } from 'react-native';
-import Ionicons from '@expo/vector-icons/Ionicons';
 import { Surface } from 'react-native-paper';
 import { useAuth } from '../context/AuthContext';
 import { colors } from '../theme/theme';
+import AppIcon from '../components/AppIcon';
 import FormInput from '../components/FormInput';
 import PasswordInput from '../components/PasswordInput';
 
 import PrimaryButton from '../components/PrimaryButton';
 import ScreenContainer from '../components/ScreenContainer';
+import { cleanText, isValidEmail } from '../utils/validation';
 
 export default function LoginScreen({ navigation }) {
   const { login } = useAuth();
   const [form, setForm] = useState({ identifier: '', password: '' });
+  const [errors, setErrors] = useState({});
   const [loading, setLoading] = useState(false);
 
   const updateField = (key, value) => {
@@ -20,9 +22,35 @@ export default function LoginScreen({ navigation }) {
   };
 
   const handleLogin = async () => {
+    if (loading) {
+      return;
+    }
+
+    const identifier = cleanText(form.identifier).toLowerCase();
+    const password = String(form.password || '').trim();
+    const nextErrors = {};
+
+    if (!identifier) {
+      nextErrors.identifier = 'Email or user ID is required.';
+    } else if (identifier.includes('@') && !isValidEmail(identifier)) {
+      nextErrors.identifier = 'Enter a valid email address.';
+    } else if (!/^[A-Za-z0-9@._-]+$/.test(identifier)) {
+      nextErrors.identifier = 'Use a valid email address or user ID.';
+    }
+
+    if (!password) {
+      nextErrors.password = 'Password is required.';
+    }
+
+    setErrors(nextErrors);
+
+    if (Object.keys(nextErrors).length) {
+      return;
+    }
+
     try {
       setLoading(true);
-      await login(form);
+      await login({ identifier, password });
     } catch (error) {
       Alert.alert('Login failed', error.message);
     } finally {
@@ -34,7 +62,7 @@ export default function LoginScreen({ navigation }) {
     <ScreenContainer contentStyle={styles.container}>
       <View style={styles.hero}>
         <View style={styles.logoMark}>
-          <Ionicons color={colors.primary} name="business-outline" size={24} />
+          <AppIcon color={colors.primary} name="business-outline" size={24} />
         </View>
         <Text style={styles.kicker}>Society Connect</Text>
         <Text style={styles.title}>A Smarter Way to Manage Society Complaints</Text>
@@ -48,12 +76,14 @@ export default function LoginScreen({ navigation }) {
           onChangeText={value => updateField('identifier', value)}
           placeholder="sara.admin@societyconnect.com"
           value={form.identifier}
+          error={errors.identifier}
         />
         <PasswordInput
           label="Password"
           onChangeText={value => updateField('password', value)}
           placeholder="Enter your password"
           value={form.password}
+          error={errors.password}
         />
         <PrimaryButton label="Login" loading={loading} onPress={handleLogin} />
         <Text style={styles.helperText}>

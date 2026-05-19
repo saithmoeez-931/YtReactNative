@@ -7,10 +7,12 @@ import FormInput from '../components/FormInput';
 import PrimaryButton from '../components/PrimaryButton';
 import ScreenContainer from '../components/ScreenContainer';
 import { complaintCategories } from '../constants/complaintTaxonomy';
+import { cleanText, hasErrors, isUsefulCode, isUsefulText } from '../utils/validation';
 
 export default function SubmitComplaintScreen() {
   const { token, user } = useAuth();
   const [loading, setLoading] = useState(false);
+  const [errors, setErrors] = useState({});
   const [form, setForm] = useState({
     houseNumber: user?.houseNumber || '',
     block: user?.block || '',
@@ -23,19 +25,43 @@ export default function SubmitComplaintScreen() {
   };
 
   const submitComplaint = async () => {
-    if (!form.block.trim() || !form.description.trim() || !form.category.trim()) {
-      Alert.alert('Missing details', 'Block, category, and description are required.');
+    if (loading) {
+      return;
+    }
+
+    const payload = {
+      houseNumber: cleanText(form.houseNumber).toUpperCase(),
+      block: cleanText(form.block).toUpperCase(),
+      category: cleanText(form.category),
+      description: cleanText(form.description),
+    };
+    const nextErrors = {};
+
+    if (!isUsefulCode(payload.houseNumber)) {
+      nextErrors.houseNumber = 'House number must contain useful letters or numbers.';
+    }
+
+    if (!isUsefulCode(payload.block)) {
+      nextErrors.block = 'Block must contain useful letters or numbers.';
+    }
+
+    if (!complaintCategories.includes(payload.category)) {
+      nextErrors.category = 'Select a valid complaint category.';
+    }
+
+    if (!isUsefulText(payload.description, 15)) {
+      nextErrors.description = 'Description must be at least 15 meaningful characters.';
+    }
+
+    setErrors(nextErrors);
+
+    if (hasErrors(nextErrors)) {
       return;
     }
 
     try {
       setLoading(true);
-      const response = await api.createComplaint(token, {
-        ...form,
-        block: form.block.trim(),
-        description: form.description.trim(),
-        houseNumber: form.houseNumber.trim(),
-      });
+      const response = await api.createComplaint(token, payload);
       Alert.alert('Complaint submitted', response.message || 'Your complaint has been created successfully.');
       setForm(current => ({
         ...current,
@@ -57,8 +83,8 @@ export default function SubmitComplaintScreen() {
       </Text>
 
       <View style={styles.card}>
-        <FormInput label="House Number" onChangeText={value => updateField('houseNumber', value)} value={form.houseNumber} />
-        <FormInput label="Block" onChangeText={value => updateField('block', value)} value={form.block} />
+        <FormInput error={errors.houseNumber} label="House Number" onChangeText={value => updateField('houseNumber', value)} value={form.houseNumber} />
+        <FormInput error={errors.block} label="Block" onChangeText={value => updateField('block', value)} value={form.block} />
         <View style={styles.categorySection}>
           <Text style={styles.fieldLabel}>Category</Text>
           <View style={styles.categoryList}>
@@ -82,6 +108,7 @@ export default function SubmitComplaintScreen() {
               </Pressable>
             ))}
           </View>
+          {errors.category ? <Text style={styles.errorText}>{errors.category}</Text> : null}
         </View>
         <FormInput
           label="Description"
@@ -89,6 +116,7 @@ export default function SubmitComplaintScreen() {
           onChangeText={value => updateField('description', value)}
           placeholder="Describe the issue clearly so the staff knows what to fix."
           value={form.description}
+          error={errors.description}
         />
         <PrimaryButton label="Submit complaint" loading={loading} onPress={submitComplaint} />
       </View>
@@ -141,5 +169,9 @@ const styles = StyleSheet.create({
   },
   categoryChipTextActive: {
     color: '#ffffff',
+  },
+  errorText: {
+    color: colors.danger,
+    fontSize: 12,
   },
 });

@@ -1,11 +1,11 @@
 import React, { useCallback, useState } from 'react';
 import { Alert, RefreshControl, StyleSheet, Text, View } from 'react-native';
-import Ionicons from '@expo/vector-icons/Ionicons';
 import { useFocusEffect } from '@react-navigation/native';
 import { Chip, Surface } from 'react-native-paper';
 import { useAuth } from '../context/AuthContext';
 import { api } from '../services/api';
 import { colors } from '../theme/theme';
+import AppIcon from '../components/AppIcon';
 import ScreenContainer from '../components/ScreenContainer';
 import StatCard from '../components/StatCard';
 import StatusBadge from '../components/StatusBadge';
@@ -88,7 +88,7 @@ export default function WorkerRecordScreen({ route }) {
           record.recentComplaints.map(complaint => (
             <View key={complaint._id} style={styles.complaintRow}>
               <View style={styles.complaintIcon}>
-                <Ionicons color={colors.primary} name="document-text-outline" size={18} />
+                <AppIcon color={colors.primary} name="document-text-outline" size={18} />
               </View>
               <View style={styles.complaintBody}>
                 <View style={styles.complaintHeader}>

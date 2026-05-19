@@ -2,8 +2,8 @@ import React from 'react';
 import { ActivityIndicator, View } from 'react-native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
-import Ionicons from '@expo/vector-icons/Ionicons';
 import { useAuth } from '../context/AuthContext';
+import AppIcon from '../components/AppIcon';
 import { colors } from '../theme/theme';
 import AdminFormScreen from '../screens/AdminFormScreen';
 import AdminListScreen from '../screens/AdminListScreen';
@@ -105,7 +105,7 @@ function DashboardTabs({ role }) {
         },
         tabBarIcon: ({ color, size }) => {
           const currentTab = tabs.find(tab => tab.name === route.name);
-          return <Ionicons color={color} name={currentTab?.icon || 'ellipse-outline'} size={size} />;
+          return <AppIcon color={color} name={currentTab?.icon || 'ellipse-outline'} size={size} />;
         },
       })}
     >

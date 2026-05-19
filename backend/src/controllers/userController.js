@@ -1,5 +1,10 @@
 const User = require('../models/User');
 const Complaint = require('../models/Complaint');
+const {
+  isValidEmail,
+  isValidName,
+  isValidPassword,
+} = require('../utils/validation');
 const demoStore = require('../store/demoStore');
 
 async function getWorkers(req, res) {
@@ -57,9 +62,19 @@ async function createAdmin(req, res) {
   const cleanEmail = typeof email === 'string' ? email.trim().toLowerCase() : '';
   const cleanPassword = typeof password === 'string' ? password.trim() : '';
 
-  if (!cleanName || !cleanEmail || !cleanPassword) {
+  if (!isValidName(cleanName)) {
     res.status(400);
-    throw new Error('Name, email, and password are required.');
+    throw new Error('Enter a real name using letters and spaces.');
+  }
+
+  if (!isValidEmail(cleanEmail)) {
+    res.status(400);
+    throw new Error('Enter a valid email address.');
+  }
+
+  if (!isValidPassword(cleanPassword)) {
+    res.status(400);
+    throw new Error('Password must be at least 8 characters and include letters and numbers.');
   }
 
   const existingUser = await User.findOne({ email: cleanEmail });
@@ -103,6 +118,21 @@ async function updateAdmin(req, res) {
   const cleanName = typeof name === 'string' ? name.trim() : '';
   const cleanEmail = typeof email === 'string' ? email.trim().toLowerCase() : '';
   const cleanPassword = typeof password === 'string' ? password.trim() : '';
+
+  if (cleanName && !isValidName(cleanName)) {
+    res.status(400);
+    throw new Error('Enter a real name using letters and spaces.');
+  }
+
+  if (cleanEmail && !isValidEmail(cleanEmail)) {
+    res.status(400);
+    throw new Error('Enter a valid email address.');
+  }
+
+  if (cleanPassword && !isValidPassword(cleanPassword)) {
+    res.status(400);
+    throw new Error('Password must be at least 8 characters and include letters and numbers.');
+  }
 
   if (cleanEmail && cleanEmail !== admin.email) {
     const existingUser = await User.findOne({ email: cleanEmail });
@@ -152,9 +182,19 @@ async function createWorker(req, res) {
         .map(item => item.trim())
         .filter(Boolean);
 
-  if (!cleanName || !cleanEmail || !cleanPassword) {
+  if (!isValidName(cleanName)) {
     res.status(400);
-    throw new Error('Name, email, and password are required.');
+    throw new Error('Enter a real name using letters and spaces.');
+  }
+
+  if (!isValidEmail(cleanEmail)) {
+    res.status(400);
+    throw new Error('Enter a valid email address.');
+  }
+
+  if (!isValidPassword(cleanPassword)) {
+    res.status(400);
+    throw new Error('Password must be at least 8 characters and include letters and numbers.');
   }
 
   const existingUser = await User.findOne({ email: cleanEmail });
@@ -207,6 +247,21 @@ async function updateWorker(req, res) {
   const cleanName = typeof name === 'string' ? name.trim() : '';
   const cleanEmail = typeof email === 'string' ? email.trim().toLowerCase() : '';
   const cleanPassword = typeof password === 'string' ? password.trim() : '';
+
+  if (cleanName && !isValidName(cleanName)) {
+    res.status(400);
+    throw new Error('Enter a real name using letters and spaces.');
+  }
+
+  if (cleanEmail && !isValidEmail(cleanEmail)) {
+    res.status(400);
+    throw new Error('Enter a valid email address.');
+  }
+
+  if (cleanPassword && !isValidPassword(cleanPassword)) {
+    res.status(400);
+    throw new Error('Password must be at least 8 characters and include letters and numbers.');
+  }
 
   if (cleanEmail && cleanEmail !== worker.email) {
     const existingUser = await User.findOne({ email: cleanEmail });

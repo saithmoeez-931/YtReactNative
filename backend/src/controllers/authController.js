@@ -2,6 +2,12 @@ const mongoose = require('mongoose');
 const User = require('../models/User');
 const generateToken = require('../utils/generateToken');
 const normalizeHouse = require('../utils/normalizeHouse');
+const {
+  isUsefulCode,
+  isValidEmail,
+  isValidName,
+  isValidPassword,
+} = require('../utils/validation');
 const demoStore = require('../store/demoStore');
 
 async function register(req, res) {
@@ -11,14 +17,24 @@ async function register(req, res) {
   const cleanPassword = String(password || '').trim();
   const cleanHouse = normalizeHouse(block, houseNumber);
 
-  if (!cleanName || !cleanEmail || !cleanPassword) {
+  if (!isValidName(cleanName)) {
     res.status(400);
-    throw new Error('Name, email, and password are required.');
+    throw new Error('Enter a real name using letters and spaces.');
   }
 
-  if (!cleanHouse.block || !cleanHouse.houseNumber) {
+  if (!isValidEmail(cleanEmail)) {
     res.status(400);
-    throw new Error('Block and house number are required for resident registration.');
+    throw new Error('Enter a valid email address.');
+  }
+
+  if (!isValidPassword(cleanPassword)) {
+    res.status(400);
+    throw new Error('Password must be at least 8 characters and include letters and numbers.');
+  }
+
+  if (!isUsefulCode(cleanHouse.block) || !isUsefulCode(cleanHouse.houseNumber)) {
+    res.status(400);
+    throw new Error('Block and house number must contain useful letters or numbers.');
   }
 
   if (process.env.DEMO_MODE === 'true') {
@@ -95,9 +111,14 @@ async function login(req, res) {
   const { email, identifier, password } = req.body;
   const loginIdentifier = (email || identifier || '').trim();
 
-  if (!loginIdentifier || !password) {
+  if (!loginIdentifier || !String(password || '').trim()) {
     res.status(400);
     throw new Error('Email or user ID and password are required.');
+  }
+
+  if (!/^[A-Za-z0-9@._-]+$/.test(loginIdentifier)) {
+    res.status(400);
+    throw new Error('Use a valid email address or user ID.');
   }
 
   const query = mongoose.Types.ObjectId.isValid(loginIdentifier)

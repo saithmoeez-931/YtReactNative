@@ -9,6 +9,7 @@ import PasswordInput from '../components/PasswordInput';
 import PrimaryButton from '../components/PrimaryButton';
 import ScreenContainer from '../components/ScreenContainer';
 import { workerSpecialties } from '../constants/complaintTaxonomy';
+import { hasErrors, validateAccountForm } from '../utils/validation';
 
 export default function WorkerDetailsScreen({ navigation, route }) {
   const { token } = useAuth();
@@ -21,6 +22,7 @@ export default function WorkerDetailsScreen({ navigation, route }) {
     isActive: worker?.isActive !== false,
     specialties: worker?.specialties?.length ? worker.specialties : ['general'],
   });
+  const [errors, setErrors] = useState({});
 
   const updateField = (key, value) => setForm(current => ({ ...current, [key]: value }));
 
@@ -35,16 +37,20 @@ export default function WorkerDetailsScreen({ navigation, route }) {
   };
 
   const handleSave = async () => {
+    if (loading) {
+      return;
+    }
+
+    const validation = validateAccountForm(form, { passwordRequired: false });
     const payload = {
-      name: form.name.trim(),
-      email: form.email.trim().toLowerCase(),
-      password: form.password.trim(),
+      ...validation.payload,
       isActive: form.isActive,
       specialties: form.specialties,
     };
 
-    if (!payload.name || !payload.email) {
-      Alert.alert('Missing details', 'Name and email are required.');
+    setErrors(validation.errors);
+
+    if (hasErrors(validation.errors)) {
       return;
     }
 
@@ -68,9 +74,9 @@ export default function WorkerDetailsScreen({ navigation, route }) {
       <Surface elevation={1} style={styles.card}>
         <Text style={styles.title}>Edit worker</Text>
         <Text style={styles.subtitle}>Update worker profile, status, and complaint specialties.</Text>
-        <FormInput label="Name" onChangeText={value => updateField('name', value)} value={form.name} />
-        <FormInput label="Email" onChangeText={value => updateField('email', value)} value={form.email} />
-        <PasswordInput label="New password (optional)" onChangeText={value => updateField('password', value)} value={form.password} />
+        <FormInput error={errors.name} label="Name" onChangeText={value => updateField('name', value)} value={form.name} />
+        <FormInput error={errors.email} label="Email" onChangeText={value => updateField('email', value)} value={form.email} />
+        <PasswordInput error={errors.password} label="New password (optional)" onChangeText={value => updateField('password', value)} value={form.password} />
         <Button
           mode="outlined"
           onPress={() => updateField('isActive', !form.isActive)}

@@ -1,6 +1,5 @@
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
-import Ionicons from '@expo/vector-icons/Ionicons';
 import { Card, Chip } from 'react-native-paper';
 import { colors } from '../theme/theme';
 import {
@@ -8,6 +7,7 @@ import {
   formatTimeRemaining,
   isComplaintOverdue,
 } from '../utils/timeLabels';
+import AppIcon from './AppIcon';
 import StatusBadge from './StatusBadge';
 
 export default function ComplaintCard({ complaint, onPress }) {
@@ -40,7 +40,7 @@ export default function ComplaintCard({ complaint, onPress }) {
 
         <View style={[styles.timelineBar, overdue && styles.timelineBarOverdue]}>
           <View style={styles.timelineIcon}>
-            <Ionicons color={overdue ? colors.danger : colors.success} name="time-outline" size={18} />
+            <AppIcon color={overdue ? colors.danger : colors.success} name="time-outline" size={18} />
           </View>
           <View style={styles.timelineTextGroup}>
             <Text style={[styles.timelineTitle, overdue && styles.timelineTitleOverdue]}>
@@ -59,7 +59,7 @@ export default function ComplaintCard({ complaint, onPress }) {
 function InfoItem({ icon, label }) {
   return (
     <View style={styles.infoItem}>
-      <Ionicons color={colors.textMuted} name={icon} size={15} />
+      <AppIcon color={colors.textMuted} name={icon} size={15} />
       <Text numberOfLines={1} style={styles.infoText}>{label}</Text>
     </View>
   );

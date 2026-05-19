@@ -8,6 +8,7 @@ import FormInput from '../components/FormInput';
 import PasswordInput from '../components/PasswordInput';
 import PrimaryButton from '../components/PrimaryButton';
 import ScreenContainer from '../components/ScreenContainer';
+import { hasErrors, validateAccountForm } from '../utils/validation';
 
 export default function AdminFormScreen({ navigation, route }) {
   const { token } = useAuth();
@@ -19,18 +20,21 @@ export default function AdminFormScreen({ navigation, route }) {
     email: admin?.email || '',
     password: '',
   });
+  const [errors, setErrors] = useState({});
 
   const updateField = (key, value) => setForm(current => ({ ...current, [key]: value }));
 
   const handleSave = async () => {
-    const payload = {
-      name: form.name.trim(),
-      email: form.email.trim().toLowerCase(),
-      password: form.password.trim(),
-    };
+    if (loading) {
+      return;
+    }
 
-    if (!payload.name || !payload.email || (!editing && !payload.password)) {
-      Alert.alert('Missing details', 'Name, email, and password are required for new admins.');
+    const validation = validateAccountForm(form, { passwordRequired: !editing });
+    const payload = { ...validation.payload };
+
+    setErrors(validation.errors);
+
+    if (hasErrors(validation.errors)) {
       return;
     }
 
@@ -58,9 +62,10 @@ export default function AdminFormScreen({ navigation, route }) {
       <Surface elevation={1} style={styles.card}>
         <Text style={styles.title}>{editing ? 'Edit admin' : 'Create admin'}</Text>
         <Text style={styles.subtitle}>Admins can manage complaints but cannot create staff accounts.</Text>
-        <FormInput label="Name" onChangeText={value => updateField('name', value)} value={form.name} />
-        <FormInput label="Email" onChangeText={value => updateField('email', value)} value={form.email} />
+        <FormInput error={errors.name} label="Name" onChangeText={value => updateField('name', value)} value={form.name} />
+        <FormInput error={errors.email} label="Email" onChangeText={value => updateField('email', value)} value={form.email} />
         <PasswordInput
+          error={errors.password}
           label={editing ? 'New password (optional)' : 'Password'}
           onChangeText={value => updateField('password', value)}
           value={form.password}

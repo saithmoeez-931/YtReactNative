@@ -13,7 +13,7 @@ function calculateResolutionTimeline({
 }) {
   const baseHours = baseHoursByPriority[priority] || baseHoursByPriority.Low;
   const workloadHours =
-    activeComplaintCount >= 5 ? 18 : activeComplaintCount >= 3 ? 6 : 0;
+    activeComplaintCount >= 5 ? 18 : activeComplaintCount >= 3 ? 2 : 0;
   const duplicateMultiplier = duplicateCount > 0 ? 0.8 : 1;
   const expectedResolutionHours = Math.max(
     2,

@@ -9,11 +9,13 @@ import PasswordInput from '../components/PasswordInput';
 import PrimaryButton from '../components/PrimaryButton';
 import ScreenContainer from '../components/ScreenContainer';
 import { workerSpecialties } from '../constants/complaintTaxonomy';
+import { hasErrors, validateAccountForm } from '../utils/validation';
 
 export default function WorkerFormScreen({ navigation }) {
   const { token } = useAuth();
   const [loading, setLoading] = useState(false);
   const [form, setForm] = useState({ name: '', email: '', password: '', specialties: [] });
+  const [errors, setErrors] = useState({});
 
   const updateField = (key, value) => setForm(current => ({ ...current, [key]: value }));
 
@@ -27,15 +29,19 @@ export default function WorkerFormScreen({ navigation }) {
   };
 
   const handleCreate = async () => {
+    if (loading) {
+      return;
+    }
+
+    const validation = validateAccountForm(form, { passwordRequired: true });
     const payload = {
-      name: form.name.trim(),
-      email: form.email.trim().toLowerCase(),
-      password: form.password.trim(),
+      ...validation.payload,
       specialties: form.specialties.length ? form.specialties : ['general'],
     };
 
-    if (!payload.name || !payload.email || !payload.password) {
-      Alert.alert('Missing details', 'Name, email, and password are required.');
+    setErrors(validation.errors);
+
+    if (hasErrors(validation.errors)) {
       return;
     }
 
@@ -55,9 +61,9 @@ export default function WorkerFormScreen({ navigation }) {
       <Surface elevation={1} style={styles.card}>
         <Text style={styles.title}>Create worker</Text>
         <Text style={styles.subtitle}>Specialties decide which complaints can be auto-assigned.</Text>
-        <FormInput label="Worker name" onChangeText={value => updateField('name', value)} value={form.name} />
-        <FormInput label="Email" onChangeText={value => updateField('email', value)} value={form.email} />
-        <PasswordInput label="Password" onChangeText={value => updateField('password', value)} value={form.password} />
+        <FormInput error={errors.name} label="Worker name" onChangeText={value => updateField('name', value)} value={form.name} />
+        <FormInput error={errors.email} label="Email" onChangeText={value => updateField('email', value)} value={form.email} />
+        <PasswordInput error={errors.password} label="Password" onChangeText={value => updateField('password', value)} value={form.password} />
         <Text style={styles.fieldLabel}>Specialties</Text>
         <View style={styles.chipRow}>
           {workerSpecialties.map(option => (

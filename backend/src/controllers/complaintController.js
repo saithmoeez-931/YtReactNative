@@ -6,20 +6,42 @@ const {
 } = require('../services/assignmentService');
 const calculatePriority = require('../utils/calculatePriority');
 const calculateResolutionTimeline = require('../utils/calculateResolutionTimeline');
+const { isUsefulCode, isUsefulText } = require('../utils/validation');
+const { complaintCategories } = require('../constants/complaintTaxonomy');
 const demoStore = require('../store/demoStore');
 
 async function createComplaint(req, res) {
   const { category, description, houseNumber, block } = req.body;
 
-  if (!category || !description || !block) {
+  const cleanCategory = String(category || '').trim();
+  const cleanDescription = String(description || '').trim().replace(/\s+/g, ' ');
+  const cleanBlock = String(block || '').trim().toUpperCase();
+  const cleanHouseNumber = String(houseNumber || '').trim().toUpperCase();
+
+  if (!complaintCategories.includes(cleanCategory)) {
     res.status(400);
-    throw new Error('Category, description, and block are required.');
+    throw new Error('Select a valid complaint category.');
+  }
+
+  if (!isUsefulCode(cleanBlock) || !isUsefulCode(cleanHouseNumber)) {
+    res.status(400);
+    throw new Error('Block and house number must contain useful letters or numbers.');
+  }
+
+  if (!isUsefulText(cleanDescription, 15)) {
+    res.status(400);
+    throw new Error('Description must be at least 15 meaningful characters.');
   }
 
   if (process.env.DEMO_MODE === 'true') {
     const complaint = demoStore.createComplaint(
       req.user,
-      { category, description, houseNumber, block },
+      {
+        category: cleanCategory,
+        description: cleanDescription,
+        houseNumber: cleanHouseNumber,
+        block: cleanBlock,
+      },
     );
 
     res.status(201).json({
@@ -31,8 +53,8 @@ async function createComplaint(req, res) {
   }
 
   const duplicateCandidates = await Complaint.find({
-    category,
-    block,
+    category: cleanCategory,
+    block: cleanBlock,
     status: { $ne: 'Resolved' },
   }).sort({ createdAt: -1 });
 
@@ -43,8 +65,8 @@ async function createComplaint(req, res) {
     activeComplaintCount,
     activeComplaintCountAfterAssignment,
     reason: assignmentReason,
-  } = await selectBalancedWorker(category);
-  const priority = calculatePriority(category, duplicateCount);
+  } = await selectBalancedWorker(cleanCategory);
+  const priority = calculatePriority(cleanCategory, duplicateCount);
   const timeline = calculateResolutionTimeline({
     priority,
     activeComplaintCount: activeComplaintCountAfterAssignment,
@@ -53,10 +75,10 @@ async function createComplaint(req, res) {
 
   const complaint = await Complaint.create({
     userId: req.user._id,
-    category,
-    description,
-    houseNumber,
-    block,
+    category: cleanCategory,
+    description: cleanDescription,
+    houseNumber: cleanHouseNumber,
+    block: cleanBlock,
     priority,
     expectedResolutionHours: timeline.expectedResolutionHours,
     dueAt: timeline.dueAt,
@@ -188,6 +210,12 @@ async function getComplaintById(req, res) {
 async function assignComplaint(req, res) {
   const workerId = req.body.workerId || req.query.workerId;
   const { remark } = req.body;
+  const cleanRemark = String(remark || '').trim().replace(/\s+/g, ' ');
+
+  if (cleanRemark && !isUsefulText(cleanRemark, 5)) {
+    res.status(400);
+    throw new Error('Remark must contain at least 5 meaningful characters.');
+  }
 
   if (process.env.DEMO_MODE === 'true') {
     const complaint = demoStore.getComplaintById(req.params.id);
@@ -214,7 +242,7 @@ async function assignComplaint(req, res) {
       throw new Error('Selected user exists but is not a worker.');
     }
 
-    const updatedComplaint = demoStore.assignComplaint(req.params.id, workerId, req.user, remark);
+    const updatedComplaint = demoStore.assignComplaint(req.params.id, workerId, req.user, cleanRemark);
 
     res.json({
       success: true,
@@ -257,9 +285,9 @@ async function assignComplaint(req, res) {
   complaint.status = 'In Progress';
   complaint.assignmentSource = 'manual';
 
-  if (remark) {
+  if (cleanRemark) {
     complaint.remarks.push({
-      text: remark,
+      text: cleanRemark,
       addedBy: req.user._id,
     });
   }
@@ -288,6 +316,32 @@ async function updateComplaintStatus(req, res) {
     priority,
     expectedResolutionHours,
   } = req.body;
+  const cleanRemark = String(remark || '').trim().replace(/\s+/g, ' ');
+  const cleanFeedbackComment = String(feedbackComment || '').trim().replace(/\s+/g, ' ');
+
+  if (status && !['Pending', 'In Progress', 'Resolved'].includes(status)) {
+    res.status(400);
+    throw new Error('Select a valid complaint status.');
+  }
+
+  if (cleanRemark && !isUsefulText(cleanRemark, 5)) {
+    res.status(400);
+    throw new Error('Remark must contain at least 5 meaningful characters.');
+  }
+
+  if (cleanFeedbackComment && !isUsefulText(cleanFeedbackComment, 5)) {
+    res.status(400);
+    throw new Error('Feedback comment must contain at least 5 meaningful characters.');
+  }
+
+  if (rating !== undefined && rating !== '') {
+    const cleanRating = Number(rating);
+
+    if (!Number.isInteger(cleanRating) || cleanRating < 1 || cleanRating > 5) {
+      res.status(400);
+      throw new Error('Rating must be a number from 1 to 5.');
+    }
+  }
 
   if (process.env.DEMO_MODE === 'true') {
     const complaint = demoStore.getComplaintById(req.params.id);
@@ -308,7 +362,7 @@ async function updateComplaintStatus(req, res) {
         throw new Error('You can only update your own complaints.');
       }
 
-      if (status || remark) {
+      if (status || cleanRemark) {
         res.status(403);
         throw new Error('Residents can only submit feedback after resolution.');
       }
@@ -321,7 +375,7 @@ async function updateComplaintStatus(req, res) {
 
     const updatedComplaint = demoStore.updateComplaintStatus(
       req.params.id,
-      { status, remark, rating, feedbackComment },
+      { status, remark: cleanRemark, rating, feedbackComment: cleanFeedbackComment },
       req.user,
     );
 
@@ -357,7 +411,7 @@ async function updateComplaintStatus(req, res) {
       throw new Error('You can only update your own complaints.');
     }
 
-    if (status || remark) {
+    if (status || cleanRemark) {
       res.status(403);
       throw new Error('Residents can only submit feedback after resolution.');
     }
@@ -370,6 +424,11 @@ async function updateComplaintStatus(req, res) {
 
   if (status) {
     complaint.status = status;
+  }
+
+  if (priority && !['Low', 'Medium', 'High', 'Urgent'].includes(priority)) {
+    res.status(400);
+    throw new Error('Select a valid priority.');
   }
 
   if (priority && ['admin', 'super_admin'].includes(req.user.role)) {
@@ -398,17 +457,17 @@ async function updateComplaintStatus(req, res) {
     complaint.deadlineOverridden = true;
   }
 
-  if (remark) {
+  if (cleanRemark) {
     complaint.remarks.push({
-      text: remark,
+      text: cleanRemark,
       addedBy: req.user._id,
     });
   }
 
-  if (rating || feedbackComment) {
+  if (rating || cleanFeedbackComment) {
     complaint.feedback = {
-      rating,
-      comment: feedbackComment,
+      rating: rating ? Number(rating) : complaint.feedback?.rating,
+      comment: cleanFeedbackComment,
     };
   }
 

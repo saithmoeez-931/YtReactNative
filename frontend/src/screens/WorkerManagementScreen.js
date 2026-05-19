@@ -1,11 +1,11 @@
 import React, { useCallback, useState } from 'react';
 import { Alert, StyleSheet, Text, View } from 'react-native';
-import Ionicons from '@expo/vector-icons/Ionicons';
 import { useFocusEffect } from '@react-navigation/native';
 import { Surface } from 'react-native-paper';
 import { useAuth } from '../context/AuthContext';
 import { api } from '../services/api';
 import { colors } from '../theme/theme';
+import AppIcon from '../components/AppIcon';
 import PrimaryButton from '../components/PrimaryButton';
 import ScreenContainer from '../components/ScreenContainer';
 
@@ -90,7 +90,7 @@ export default function WorkerManagementScreen({ navigation }) {
 function StaffStat({ icon, label, value }) {
   return (
     <Surface elevation={1} style={styles.statCard}>
-      <Ionicons color={colors.primary} name={icon} size={24} />
+      <AppIcon color={colors.primary} name={icon} size={24} />
       <Text style={styles.statValue}>{value}</Text>
       <Text style={styles.statLabel}>{label}</Text>
     </Surface>
